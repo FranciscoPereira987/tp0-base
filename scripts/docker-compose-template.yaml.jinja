@@ -11,43 +11,19 @@ services:
     networks:
       - testing_net
 
-
-  client1:
-    container_name: client1
+{% for i in range(1, clients+1) %}
+  client{{i}}:
+    container_name: client{{i}}
     image: client:latest
     entrypoint: /client
     environment:
-      - CLI_ID=1
+      - CLI_ID={{i}}
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
     depends_on:
       - server
-
-  client2:
-    container_name: client2
-    image: client:latest
-    entrypoint: /client
-    environment:
-      - CLI_ID=2
-      - CLI_LOG_LEVEL=DEBUG
-    networks:
-      - testing_net
-    depends_on:
-      - server
-
-  client3:
-    container_name: client3
-    image: client:latest
-    entrypoint: /client
-    environment:
-      - CLI_ID=3
-      - CLI_LOG_LEVEL=DEBUG
-    networks:
-      - testing_net
-    depends_on:
-      - server
-
+{% endfor %}
 
 networks:
   testing_net:

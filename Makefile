@@ -26,6 +26,9 @@ docker-image:
 .PHONY: docker-image
 
 docker-compose-up: docker-image
+	# make CLIENTS=N docker-compose-up levanta el servicio con N clientes
+	# lo primero que hace es correr el script para generar el nuevo docker-compose
+	python scripts/compose_script.py -c $(CLIENTS)
 	docker compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 
