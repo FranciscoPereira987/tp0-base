@@ -8,6 +8,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
+    volumes:
+      - ./config/server:/config/
     networks:
       - testing_net
 
@@ -21,6 +23,8 @@ services:
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./config/client:/config
     depends_on:
       - server
 {% endfor %}
