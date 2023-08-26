@@ -24,7 +24,7 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-	stopSignal <-chan bool
+	stopNotify <-chan bool
 	running bool
 }
 
@@ -55,10 +55,12 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+//Returns if the client is running
+//If the client is running, checks if a signal has been recieved to shut down the client
 func (c *Client) isRunning() bool {
 	if c.running {
 		select{
-		case c.running = <-c.stopSignal:
+		case c.running = <-c.stopNotify:
 		default:
 
 		}
@@ -66,21 +68,28 @@ func (c *Client) isRunning() bool {
 	return c.running
 }
 
-func (c *Client) setStatusManager() {
-	listener := make(chan os.Signal)
-	timeout := time.After(c.config.LoopLapse)
-	stopSignal := make(chan bool)
 
-	c.stopSignal = stopSignal
+//Sets the c.stopNotify channel and starts up manageStatus 
+func (c *Client) setStatusManager() {
+	
+	stopNotify := make(chan bool)
+
+	c.stopNotify = stopNotify
 	c.running = true
 	
-	signal.Notify(listener, syscall.SIGTERM)
-	
-	go c.manageStatus(listener, timeout, stopSignal)
+	go c.manageStatus(stopNotify)
 }
 
-func (c Client) manageStatus(listener <-chan os.Signal, timeout <-chan time.Time, stopSignal chan<- bool) {
-	defer close(stopSignal)
+//Waits for either a message on listener or a timeout, then writes into stopNotify
+func (c Client) manageStatus(stopNotify chan<- bool) {
+	listener := make(chan os.Signal)
+	timeout := time.After(c.config.LoopLapse)
+
+	signal.Notify(listener, syscall.SIGTERM)
+
+	defer close(listener)
+	defer close(stopNotify)
+	
 	select {
 	case <- listener:
 		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
@@ -90,7 +99,7 @@ func (c Client) manageStatus(listener <-chan os.Signal, timeout <-chan time.Time
              c.config.ID,
         )
 	}
-	stopSignal<- true
+	stopNotify<- true
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
