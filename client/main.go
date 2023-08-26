@@ -106,7 +106,8 @@ func main() {
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
-
+	
 	client := common.NewClient(clientConfig)
+	
 	client.StartClientLoop()
 }

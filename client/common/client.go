@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,6 +24,8 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	stopSignal <-chan bool
+	running bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -28,6 +33,7 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
+		running: false,
 	}
 	return client
 }
@@ -44,26 +50,56 @@ func (c *Client) createClientSocket() error {
 			err,
 		)
 	}
+	
 	c.conn = conn
 	return nil
+}
+
+func (c *Client) isRunning() bool {
+	if c.running {
+		select{
+		case c.running = <-c.stopSignal:
+		default:
+
+		}
+	}
+	return c.running
+}
+
+func (c *Client) setStatusManager() {
+	listener := make(chan os.Signal)
+	timeout := time.After(c.config.LoopLapse)
+	stopSignal := make(chan bool)
+
+	c.stopSignal = stopSignal
+	c.running = true
+	
+	signal.Notify(listener, syscall.SIGTERM)
+	
+	go c.manageStatus(listener, timeout, stopSignal)
+}
+
+func (c Client) manageStatus(listener <-chan os.Signal, timeout <-chan time.Time, stopSignal chan<- bool) {
+	defer close(stopSignal)
+	select {
+	case <- listener:
+		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
+			c.config.ID)
+	case <-timeout:
+		log.Infof("action: timeout_detected | result: success | client_id: %v",
+             c.config.ID,
+        )
+	}
+	stopSignal<- true
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
-
-loop:
+	c.setStatusManager()
 	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
-		select {
-		case <-timeout:
-	        log.Infof("action: timeout_detected | result: success | client_id: %v",
-                c.config.ID,
-            )
-			break loop
-		default:
-		}
+	for c.isRunning() {
 
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
