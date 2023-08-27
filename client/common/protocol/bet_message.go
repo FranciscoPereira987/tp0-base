@@ -3,12 +3,12 @@ package protocol
 import "errors"
 
 type Bet struct {
-	name       string
-	surname    string
-	personalId string
-	birthdate  string // yyyy-mm-dd
+	Name       string
+	Surname    string
+	PersonalId string
+	Birthdate  string // yyyy-mm-dd
 
-	betedNumber uint32
+	BetedNumber uint32
 }
 
 func (this *Bet) ShouldAck() bool {
@@ -17,10 +17,10 @@ func (this *Bet) ShouldAck() bool {
 
 func (this Bet) makeHeader() []byte {
 	length := EXTRA_BET_BYTES +
-		len(this.name) +
-		len(this.surname) +
-		len(this.personalId) +
-		len(this.birthdate)
+		len(this.Name) +
+		len(this.Surname) +
+		len(this.PersonalId) +
+		len(this.Birthdate)
 
 	header := []byte{BET_OP}
 
@@ -34,14 +34,14 @@ func (this Bet) addField(stream *[]byte, field string) {
 }
 
 func (this Bet) addBetNumbet(stream *[]byte) {
-	serializeUint32(stream, this.betedNumber)
+	serializeUint32(stream, this.BetedNumber)
 }
 
 func (this Bet) addBody(stream *[]byte) {
-	this.addField(stream, this.name)
-	this.addField(stream, this.surname)
-	this.addField(stream, this.personalId)
-	this.addField(stream, this.birthdate)
+	this.addField(stream, this.Name)
+	this.addField(stream, this.Surname)
+	this.addField(stream, this.PersonalId)
+	this.addField(stream, this.Birthdate)
 
 	this.addBetNumbet(stream)
 
@@ -114,11 +114,11 @@ func (this *Bet) Deserialize(stream []byte) (err error) {
 	if err == nil {
 		betedNumber, err = this.deserializeBet(&stream)
 
-		this.name = fields[0]
-		this.surname = fields[1]
-		this.personalId = fields[2]
-		this.birthdate = fields[3]
-		this.betedNumber = betedNumber
+		this.Name = fields[0]
+		this.Surname = fields[1]
+		this.PersonalId = fields[2]
+		this.Birthdate = fields[3]
+		this.BetedNumber = betedNumber
 	}
 
 	return err

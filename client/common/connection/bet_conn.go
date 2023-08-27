@@ -36,7 +36,7 @@ func NewBetConn(addr string) (*BetConn, error) {
 	betConn := &BetConn{
 		conn,
 	}
-
+	betConn.helloServer()
 	return betConn, nil
 }
 

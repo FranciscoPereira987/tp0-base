@@ -10,12 +10,12 @@ type testCase struct {
 
 func compareBet(a *Bet, b *Bet) (result bool) {
 
-	result = a.betedNumber == b.betedNumber
+	result = a.BetedNumber == b.BetedNumber
 
-	result = result && a.birthdate == b.birthdate
-	result = result && a.name == b.name
-	result = result && a.personalId == b.personalId
-	result = result && a.surname == b.surname
+	result = result && a.Birthdate == b.Birthdate
+	result = result && a.Name == b.Name
+	result = result && a.PersonalId == b.PersonalId
+	result = result && a.Surname == b.Surname
 
 	return
 }

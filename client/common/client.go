@@ -115,7 +115,13 @@ func (c *Client) StartClientLoop() {
 		c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		err := c.conn.Write(&protocol.Bet{}) 
+		err := c.conn.Write(&protocol.Bet{
+			Name: "Francisco",
+			Surname: "Pereira",
+			PersonalId: "41797243",
+			Birthdate: "1998-12-17",
+			BetedNumber: 333,
+		}) 
 		msgID++
 		c.conn.Close()
 

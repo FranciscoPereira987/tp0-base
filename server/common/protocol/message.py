@@ -11,6 +11,12 @@ class Message():
     def should_ack(self) -> bool:
         return True
     
+    def get_needed_size(self, stream: bytes) -> int:
+        if len(stream) != 4:
+            return -1
+        
+        return self._get_message_length(stream)
+    
     def _build_header(self, header: bytes, size: int) -> bytes:
         size += self.HEADER_SIZE
         shift = 16
