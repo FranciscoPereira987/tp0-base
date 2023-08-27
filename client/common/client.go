@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ type Client struct {
 	conn   net.Conn
 	stopNotify <-chan bool
 	running bool
+	waitGroup sync.WaitGroup
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -72,7 +74,7 @@ func (c *Client) isRunning() bool {
 //Sets the c.stopNotify channel and starts up manageStatus 
 func (c *Client) setStatusManager() {
 	
-	stopNotify := make(chan bool)
+	stopNotify := make(chan bool, 1)
 
 	c.stopNotify = stopNotify
 	c.running = true
@@ -81,12 +83,14 @@ func (c *Client) setStatusManager() {
 }
 
 //Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c Client) manageStatus(stopNotify chan<- bool) {
+func (c *Client) manageStatus(stopNotify chan<- bool) {
+	c.waitGroup.Add(1)
 	listener := make(chan os.Signal)
 	timeout := time.After(c.config.LoopLapse)
 
 	signal.Notify(listener, syscall.SIGTERM)
 
+	defer c.waitGroup.Done()
 	defer close(listener)
 	defer close(stopNotify)
 	
@@ -141,4 +145,5 @@ func (c *Client) StartClientLoop() {
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.waitGroup.Wait()
 }
