@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ type Client struct {
 	conn   net.Conn
 	stopNotify <-chan bool
 	running bool
+	waitGroup sync.WaitGroup
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -34,6 +36,7 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
 		running: false,
+		waitGroup: sync.WaitGroup{},
 	}
 	return client
 }
@@ -80,26 +83,28 @@ func (c *Client) setStatusManager() {
 	go c.manageStatus(stopNotify)
 }
 
-//Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c Client) manageStatus(stopNotify chan<- bool) {
+// Waits for either a message on listener or a timeout, then writes into stopNotify
+func (c *Client) manageStatus(stopNotify chan<- bool) {
+	c.waitGroup.Add(1)
 	listener := make(chan os.Signal)
 	timeout := time.After(c.config.LoopLapse)
 
 	signal.Notify(listener, syscall.SIGTERM)
 
+	defer c.waitGroup.Done()
 	defer close(listener)
 	defer close(stopNotify)
-	
+
 	select {
-	case <- listener:
+	case <-listener:
 		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
 			c.config.ID)
 	case <-timeout:
 		log.Infof("action: timeout_detected | result: success | client_id: %v",
-             c.config.ID,
-        )
+			c.config.ID,
+		)
 	}
-	stopNotify<- true
+	stopNotify <- true
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
@@ -141,4 +146,5 @@ func (c *Client) StartClientLoop() {
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.waitGroup.Wait()
 }
