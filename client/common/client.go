@@ -18,6 +18,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	Bet protocol.Bet
 }
 
 // Client Entity that encapsulates how
@@ -43,7 +44,7 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-	conn, err := connection.NewBetConn(c.config.ServerAddress)
+	conn, err := connection.NewBetConn(c.config.ServerAddress, c.config.ID)
 	if err != nil {
 		log.Fatalf(
 			"action: connect | result: fail | client_id: %v | error: %v",
@@ -108,20 +109,15 @@ func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
 	c.setStatusManager()
+	c.createClientSocket()
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 
 		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		err := c.conn.Write(&protocol.Bet{
-			Name: "Francisco",
-			Surname: "Pereira",
-			PersonalId: "41797243",
-			Birthdate: "1998-12-17",
-			BetedNumber: 333,
-		}) 
+		err := c.conn.Write(&c.config.Bet) 
 		msgID++
 		c.conn.Close()
 
@@ -132,7 +128,8 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
-		
+		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
+			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
 
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)

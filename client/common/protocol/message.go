@@ -67,7 +67,7 @@ func checkHeader(stream []byte, op_code byte) (err error) {
 	}
 
 	if stream[0] != op_code || length != len(stream) {
-		err = errors.New("Invalid header for Bet message")
+		err = errors.New("Invalid header for message")
 	}
 
 	return

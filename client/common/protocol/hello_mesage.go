@@ -3,7 +3,7 @@ package protocol
 import "errors"
 
 type Hello struct{
-	clientID uint32
+	ClientID uint32
 }
 
 func (this *Hello) Serialize() []byte {
@@ -22,7 +22,7 @@ func (this *Hello) Deserialize(stream []byte) error {
 	stream = stream[HEADER_SIZE:]
 	clientID, err := this.deserializeClientID(&stream)
 
-	this.clientID = clientID
+	this.ClientID = clientID
 
 	return err
 }
@@ -32,7 +32,7 @@ func (this *Hello) ShouldAck() bool {
 }
 
 func (this Hello) addClientID(stream *[]byte) {
-	serializeUint32(stream, this.clientID)
+	serializeUint32(stream, this.ClientID)
 }
 func (this Hello) deserializeClientID(stream *[]byte) (uint32, error) {
 	return deserializeUint32(stream)

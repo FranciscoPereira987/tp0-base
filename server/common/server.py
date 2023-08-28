@@ -4,6 +4,8 @@ import signal
 
 from common.bet_conn import BetConn, BetConnListener
 from common.protocol.bet_message import BetMessage
+from common.exceptions import CloseException
+from common.utils import store_bets
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -35,14 +37,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
             bet = BetMessage()
-            msg = client_sock.read(bet)
-            logging.info(f'action: receive_message | result: success | ip: {client_sock.id} | msg: {bet.bet}')
-            # TODO: Modify the send to avoid short-writes
-            #client_sock.send("{}\n".format(msg).encode('utf-8'))
+            client_sock.read(bet)
+            store_bets([bet.bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.bet.document} | number: {bet.bet.number}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
+        except CloseException as e:
+            logging.error(f"action: recieve_message | result: failed | connection: {e}")
         finally:
             client_sock.close()
 
