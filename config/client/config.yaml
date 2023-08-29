@@ -6,3 +6,9 @@ loop:
   period: "5s"
 log:
   level: "info"
+bet:
+  name: "Francisco"
+  surname: "Pereira"
+  id: "41797243"
+  birthdate: "1998-12-17"
+  beted_number: 4567

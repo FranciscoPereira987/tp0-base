@@ -23,10 +23,14 @@ class Bet:
         self.document = document
         self.birthdate = datetime.date.fromisoformat(birthdate)
         self.number = int(number)
-
+    def __str__(self):
+        return f"name: {self.first_name} {self.last_name}\n id: {self.document}\n\
+                birthdate: {self.birthdate}\n number: {self.number}"
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
+
+
 
 """
 Persist the information of each bet in the STORAGE_FILEPATH file.

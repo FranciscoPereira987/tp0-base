@@ -1,15 +1,14 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,12 +18,13 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	Bet protocol.Bet
 }
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config     ClientConfig
+	conn       *connection.BetConn
 	stopNotify <-chan bool
 	running bool
 	waitGroup sync.WaitGroup
@@ -34,7 +34,7 @@ type Client struct {
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config: config,
+		config:  config,
 		running: false,
 		waitGroup: sync.WaitGroup{},
 	}
@@ -45,24 +45,23 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
+	conn, err := connection.NewBetConn(c.config.ServerAddress, c.config.ID)
 	if err != nil {
 		log.Fatalf(
-	        "action: connect | result: fail | client_id: %v | error: %v",
+			"action: connect | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
 	}
-	
 	c.conn = conn
 	return nil
 }
 
-//Returns if the client is running
-//If the client is running, checks if a signal has been recieved to shut down the client
+// Returns if the client is running
+// If the client is running, checks if a signal has been recieved to shut down the client
 func (c *Client) isRunning() bool {
 	if c.running {
-		select{
+		select {
 		case c.running = <-c.stopNotify:
 		default:
 
@@ -71,15 +70,14 @@ func (c *Client) isRunning() bool {
 	return c.running
 }
 
-
-//Sets the c.stopNotify channel and starts up manageStatus 
+// Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
-	
-	stopNotify := make(chan bool)
+
+	stopNotify := make(chan bool, 1)
 
 	c.stopNotify = stopNotify
 	c.running = true
-	
+
 	go c.manageStatus(stopNotify)
 }
 
@@ -112,34 +110,27 @@ func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
 	c.setStatusManager()
+	c.createClientSocket()
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 
 		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		err := c.conn.Write(&c.config.Bet) 
 		msgID++
 		c.conn.Close()
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-                c.config.ID,
+				c.config.ID,
 				err,
 			)
 			return
 		}
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-            c.config.ID,
-            msg,
-        )
+		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
+			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
 
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)

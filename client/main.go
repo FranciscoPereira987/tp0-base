@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 )
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -35,6 +36,11 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
+	v.BindEnv("bet", "name")
+	v.BindEnv("bet", "surname")
+	v.BindEnv("bet", "id")
+	v.BindEnv("bet", "birthdate")
+	v.BindEnv("bet", "beted_number")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -105,9 +111,16 @@ func main() {
 		ID:            v.GetString("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		Bet: protocol.Bet{
+			Name: v.GetString("bet.name"),
+			Surname: v.GetString("bet.surname"),
+			PersonalId: v.GetString("bet.id"),
+			Birthdate: v.GetString("bet.birthdate"),
+			BetedNumber: v.GetUint32("bet.beted_number"),
+		},
 	}
 	
 	client := common.NewClient(clientConfig)
-	
+
 	client.StartClientLoop()
 }
