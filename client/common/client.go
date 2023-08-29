@@ -1,29 +1,23 @@
 package common
 
 import (
-	"encoding/csv"
-	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
-	ID            string
+	ID            int
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
-	BetPath string
-	BatchSize int
+	Reader        *BetReader
 }
 
 // Client Entity that encapsulates how
@@ -31,7 +25,7 @@ type Client struct {
 	config     ClientConfig
 	conn       *connection.BetConn
 	stopNotify <-chan bool
-	stopChan chan<- bool
+	stopChan   chan<- bool
 	running    bool
 	waitGroup  sync.WaitGroup
 }
@@ -69,7 +63,7 @@ func (c *Client) isRunning() bool {
 		select {
 		case c.running = <-c.stopNotify:
 		default:
-
+			c.running = c.config.Reader.BetsLeft()
 		}
 	}
 	return c.running
@@ -78,7 +72,7 @@ func (c *Client) isRunning() bool {
 func (c *Client) stop() {
 	if c.running {
 		select {
-		case c.running = <- c.stopNotify:
+		case c.running = <-c.stopNotify:
 		default:
 			c.stopChan <- true
 		}
@@ -125,14 +119,10 @@ func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
-	
+
 	c.createClientSocket()
-	file, err := os.Open(fmt.Sprintf("%s-%s.csv", c.config.BetPath, c.config.ID))
-	if err != nil {
-		return
-	}
 	c.setStatusManager()
-	reader := csv.NewReader(file)
+
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 
@@ -140,44 +130,22 @@ func (c *Client) StartClientLoop() {
 		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		bets := make([]protocol.Bet, 0)
-		for i := 0; i < c.config.BatchSize; i++{
+		batch := c.config.Reader.BetBatch()
 
-			record, err := reader.Read()
-			if err == io.EOF {
-				c.stop()
-			}
-			if err != nil {
-				break
-			}
-			number, _ := strconv.Atoi(record[4])
-			bet := protocol.Bet{
-				Name: record[0],
-				Surname: record[1],
-				PersonalId: record[2],
-				Birthdate: record[3],
-				BetedNumber: uint32(number),
-			}
-			bets = append(bets, bet)
-		}
-		batch := protocol.BetBatch{
-			Bets: bets,
-		}
+		err := c.conn.Write(&batch)
 		
-		err = c.conn.Write(&batch) 
-		msgID++
-		
-
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
+			c.config.ID,
+			err,
+		)
+		return
 		}
-		/*
-		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
-			bet.PersonalId, bet.BetedNumber)		
+		log.Infof("action: recieve_message | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
+		msgID++
+	/*
+			log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
+				bet.PersonalId, bet.BetedNumber)
 		*/
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)

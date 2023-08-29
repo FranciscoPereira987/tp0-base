@@ -109,13 +109,24 @@ func main() {
 
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
-		ID:            v.GetString("id"),
+		ID:            v.GetInt("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+	}
+
+	readerConfig := common.BetReaderConfig{
 		BetPath: v.GetString("dataset.path"),
+		BetFile: v.GetString("dataset.file"),
 		BatchSize: v.GetInt("batch_size"),
 	}
 	
+	clientConfig.Reader, err = common.NewBetReader(readerConfig, clientConfig.ID)
+
+	if err != nil {
+		log.Fatalf("action: open_bet_file | result: Failed | error: %s", err)
+		return
+	}
+
 	client := common.NewClient(clientConfig)
 
 	client.StartClientLoop()

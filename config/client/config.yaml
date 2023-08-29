@@ -13,5 +13,6 @@ bet:
   birthdate: "1998-12-17"
   beted_number: 4567
 dataset:
-  path: "./dataset/agency"
+  path: "./dataset/"
+  file: "agency-%d.csv"
 batch_size: 1000
