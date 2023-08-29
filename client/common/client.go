@@ -26,8 +26,8 @@ type Client struct {
 	config     ClientConfig
 	conn       *connection.BetConn
 	stopNotify <-chan bool
-	running    bool
-	waitGroup  sync.WaitGroup
+	running bool
+	waitGroup sync.WaitGroup
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -36,6 +36,7 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config:  config,
 		running: false,
+		waitGroup: sync.WaitGroup{},
 	}
 	return client
 }
