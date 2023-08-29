@@ -70,14 +70,11 @@ func (c *Client) isRunning() bool {
 }
 
 func (c *Client) stop() {
-	if c.running {
-		select {
-		case c.running = <-c.stopNotify:
-		default:
-			c.stopChan <- true
-		}
+	if c.stopChan != nil {
+		c.stopChan <- true
 		close(c.stopChan)
-		c.running = false
+		c.stopChan = nil
+		c.conn.Close()
 	}
 }
 
@@ -133,24 +130,24 @@ func (c *Client) StartClientLoop() {
 		batch := c.config.Reader.BetBatch()
 
 		err := c.conn.Write(&batch)
-		
+
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		return
+				c.config.ID,
+				err,
+			)
+			return
 		}
 		log.Infof("action: recieve_message | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
 		msgID++
-	/*
+		/*
 			log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
 				bet.PersonalId, bet.BetedNumber)
 		*/
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-	c.conn.Close()
+	c.stop()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	c.waitGroup.Wait()
 }
