@@ -22,7 +22,7 @@ def make_compose_file(clients: int):
     """
     loader = jinja.FileSystemLoader(TEMPLATE_FOLDER)
     template = jinja.Environment(loader=loader).get_template(TEMPLATE_FILE)
-    with open(COMPOSE_FILE, '+w') as compose_file:
+    with open(COMPOSE_FILE, 'w') as compose_file:
         rendered = template.render(clients=clients)
         compose_file.write(rendered)
 
