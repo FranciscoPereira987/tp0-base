@@ -1,13 +1,13 @@
 package protocol
 
 type BetBatch struct {
-	bets []Bet
+	Bets []Bet
 }
 
 func (this *BetBatch) Serialize() []byte {
 	serializedBets := make([]byte, 0)
 
-	for _, bet := range this.bets {
+	for _, bet := range this.Bets {
 		serializedBets = append(serializedBets, bet.Serialize()...)
 	}
 
@@ -51,7 +51,7 @@ func (this *BetBatch) deserializeBetMessage(stream *[]byte) (err error) {
 	if err == nil {
 		newBet := new(Bet)
 		err = newBet.Deserialize((*stream)[:betSize])
-		this.bets = append(this.bets, *newBet)
+		this.Bets = append(this.Bets, *newBet)
 		*stream = (*stream)[betSize:]
 	}
 	return

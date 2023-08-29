@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 )
@@ -12,14 +11,12 @@ import (
 // Implements a socket abstraction to work with Bets
 // Works with tcp
 type BetConn struct {
-	conn net.Conn
+	conn   net.Conn
 	active bool
-	id int
+	id     int
 }
 
-
-
-func NewBetConn(addr string, id string) (*BetConn, error) {
+func NewBetConn(addr string, id int) (*BetConn, error) {
 
 	conn, err := net.Dial("tcp", addr)
 
@@ -27,15 +24,10 @@ func NewBetConn(addr string, id string) (*BetConn, error) {
 		return nil, err
 	}
 
-	parsedId, err := strconv.Atoi(id)
-	if err != nil{
-		return nil, err
-	}
-
 	betConn := &BetConn{
 		conn,
 		false,
-		parsedId,
+		id,
 	}
 	betConn.helloServer()
 	return betConn, nil
@@ -46,14 +38,13 @@ func (this *BetConn) Close() error {
 	return this.shutdown()
 }
 
-
 func (this *BetConn) Write(message protocol.Message) error {
-	if !this.active{
+	if !this.active {
 		return errors.New("Connection closed")
 	}
 
 	stream := message.Serialize()
-	
+
 	err := this.writeBytes(stream)
 
 	if message.ShouldAck() {
@@ -66,7 +57,7 @@ func (this *BetConn) Write(message protocol.Message) error {
 }
 
 func (this *BetConn) Read(message protocol.Message) error {
-	if !this.active{
+	if !this.active {
 		return errors.New("Connection closed")
 	}
 	header, err := this.peak()
@@ -76,7 +67,7 @@ func (this *BetConn) Read(message protocol.Message) error {
 
 	err = this.readMessage(header, message)
 
-	return err 
+	return err
 }
 
 func (this *BetConn) helloServer() error {
@@ -91,13 +82,11 @@ func (this *BetConn) helloServer() error {
 		return err
 	}
 
-
 	return err
 }
 
-
 func (this *BetConn) shutdown() error {
-	if !this.active{
+	if !this.active {
 		return nil
 	}
 	this.active = false
@@ -111,20 +100,19 @@ func (this *BetConn) peak() ([]byte, error) {
 func (this *BetConn) readBytes(bytes int) ([]byte, error) {
 	if bytes < 0 {
 		return nil, errors.New(fmt.Sprintf("Invalid read amount: %d", bytes))
-	} 
+	}
 
 	buff := make([]byte, bytes)
 	readed, err := this.conn.Read(buff)
-	
+
 	var chunk_size int
-	for readed < bytes && err == nil{
+	for readed < bytes && err == nil {
 		chunk_size, err = this.conn.Read(buff[readed:])
 		if chunk_size == 0 {
 			err = errors.New("Broken connection")
 		}
 		readed += chunk_size
 	}
-	
 
 	return buff, err
 }
@@ -135,7 +123,7 @@ func (this *BetConn) writeBytes(bytes []byte) error {
 
 	for writen < len(bytes) && err == nil {
 		chunk_size, err = this.conn.Write(bytes[writen:])
-		if chunk_size == 0{
+		if chunk_size == 0 {
 			err = errors.New("Broken connection")
 		}
 		writen += chunk_size
@@ -170,15 +158,15 @@ func (this *BetConn) readMessage(header []byte, expected protocol.Message) error
 		return errors.New("Malformed message read")
 	}
 
-	message, err := this.readBytes(length-4) 
+	message, err := this.readBytes(length - 4)
 
 	if err != nil {
-		return  err
+		return err
 	}
 	message = append(header, message...)
-	
+
 	err = expected.Deserialize(message)
-	
+
 	if err != nil {
 		err = this.manageInvalidMessage(message, err)
 	}

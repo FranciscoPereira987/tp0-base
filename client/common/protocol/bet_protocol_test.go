@@ -22,8 +22,8 @@ func compareBet(a *Bet, b *Bet) (result bool) {
 
 func compareBetBatch(a *BetBatch, b *BetBatch) (result bool) {
 	result = true
-	for i := 0; i < len(a.bets) && result; i++ {
-		result = result && compareBet(&a.bets[i], &b.bets[i])
+	for i := 0; i < len(a.Bets) && result; i++ {
+		result = result && compareBet(&a.Bets[i], &b.Bets[i])
 	}
 
 	return
@@ -167,10 +167,10 @@ func TestBetBatchDeserialization(t *testing.T) {
 
 	deserialized.Deserialize(serialized)
 
-	if len(deserialized.bets) != len(batchTest.bets) {
+	if len(deserialized.Bets) != len(batchTest.Bets) {
 		t.Errorf("FAILED: Batch because of size: %d != %d",
-			len(deserialized.bets),
-			len(batchTest.bets))
+			len(deserialized.Bets),
+			len(batchTest.Bets))
 	}
 
 	if !compareBetBatch(batchTest, deserialized) {

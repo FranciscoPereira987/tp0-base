@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 )
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -41,6 +40,8 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("bet", "id")
 	v.BindEnv("bet", "birthdate")
 	v.BindEnv("bet", "beted_number")
+	v.BindEnv("dataset", "path")
+	v.BindEnv("batch_size")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -108,18 +109,24 @@ func main() {
 
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
-		ID:            v.GetString("id"),
+		ID:            v.GetInt("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
-		Bet: protocol.Bet{
-			Name: v.GetString("bet.name"),
-			Surname: v.GetString("bet.surname"),
-			PersonalId: v.GetString("bet.id"),
-			Birthdate: v.GetString("bet.birthdate"),
-			BetedNumber: v.GetUint32("bet.beted_number"),
-		},
+	}
+
+	readerConfig := common.BetReaderConfig{
+		BetPath: v.GetString("dataset.path"),
+		BetFile: v.GetString("dataset.file"),
+		BatchSize: v.GetInt("batch_size"),
 	}
 	
+	clientConfig.Reader, err = common.NewBetReader(readerConfig, clientConfig.ID)
+
+	if err != nil {
+		log.Fatalf("action: open_bet_file | result: Failed | error: %s", err)
+		return
+	}
+
 	client := common.NewClient(clientConfig)
 
 	client.StartClientLoop()
