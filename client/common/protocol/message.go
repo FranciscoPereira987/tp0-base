@@ -48,7 +48,7 @@ func buildHeader(header []byte, size int) []byte {
 
 func GetMessageLength(stream []byte) (size int, err error) {
 	if len(stream) < HEADER_SIZE {
-		err = errors.New("Invalid stream for message")
+		err = errors.New("invalid stream for message")
 		return
 	}
 
@@ -67,7 +67,7 @@ func checkHeader(stream []byte, op_code byte) (err error) {
 	}
 
 	if stream[0] != op_code || length != len(stream) {
-		err = errors.New("Invalid header for message")
+		err = errors.New("invalid header for message")
 	}
 
 	return
@@ -77,7 +77,7 @@ func deserializeUint32(stream *[]byte) (uint32, error) {
 	var number uint32
 
 	if len(*stream) != 4 {
-		return number, errors.New("Stream size is diferent than expected")
+		return number, errors.New("stream size is diferent than expected")
 	}
 
 	for index, value := range *stream {

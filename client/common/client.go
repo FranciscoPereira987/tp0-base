@@ -34,8 +34,8 @@ type Client struct {
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config:  config,
-		running: false,
+		config:    config,
+		running:   false,
 		waitGroup: sync.WaitGroup{},
 	}
 	return client
@@ -94,7 +94,7 @@ func (c *Client) setStatusManager() {
 // Waits for either a message on listener or a timeout, then writes into stopNotify
 func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
 	c.waitGroup.Add(1)
-	listener := make(chan os.Signal)
+	listener := make(chan os.Signal, 1)
 
 	signal.Notify(listener, syscall.SIGTERM)
 
@@ -139,12 +139,9 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
-		log.Infof("action: recieve_message | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
+		log.Infof("action: apuestas_enviadas | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
 		msgID++
-		/*
-			log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
-				bet.PersonalId, bet.BetedNumber)
-		*/
+
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}

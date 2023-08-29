@@ -2,38 +2,38 @@ package protocol
 
 import "errors"
 
-type Hello struct{
+type Hello struct {
 	ClientID uint32
 }
 
-func (this *Hello) Serialize() []byte {
+func (h *Hello) Serialize() []byte {
 
 	stream := buildHeader([]byte{HELLO_OP}, 4)
 
-	this.addClientID(&stream)
+	h.addClientID(&stream)
 
 	return stream
 }
 
-func (this *Hello) Deserialize(stream []byte) error {
+func (h *Hello) Deserialize(stream []byte) error {
 	if len(stream) != 8 {
-		return errors.New("Invalid hello message")
+		return errors.New("invalid hello message")
 	}
 	stream = stream[HEADER_SIZE:]
-	clientID, err := this.deserializeClientID(&stream)
+	clientID, err := h.deserializeClientID(&stream)
 
-	this.ClientID = clientID
+	h.ClientID = clientID
 
 	return err
 }
 
-func (this *Hello) ShouldAck() bool {
+func (h *Hello) ShouldAck() bool {
 	return true
 }
 
-func (this Hello) addClientID(stream *[]byte) {
-	serializeUint32(stream, this.ClientID)
+func (h Hello) addClientID(stream *[]byte) {
+	serializeUint32(stream, h.ClientID)
 }
-func (this Hello) deserializeClientID(stream *[]byte) (uint32, error) {
+func (h Hello) deserializeClientID(stream *[]byte) (uint32, error) {
 	return deserializeUint32(stream)
 }

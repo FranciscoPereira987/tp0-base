@@ -69,6 +69,9 @@ class BetConn():
         ack = AckMessage()
         self.write(ack)
 
+    def __send_err(self) -> None:
+        err = ErrMessage()
+        self.write(err)
    
     def __manage_recieved_data(self, expected: Message, recieved: bytes) -> None:
         """
@@ -88,6 +91,7 @@ class BetConn():
             raise ErrRecievedException()
         
         elif not result:
+            self.__send_err()
             raise MalformedMessageException()
     
     def __end_connection(self) -> None:

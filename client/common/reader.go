@@ -9,6 +9,14 @@ import (
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 )
 
+var (
+	BET_NUMBER_POS = 4
+	NAME_POS       = 0
+	SURNAME_POS    = 1
+	ID_POS         = 2
+	BIRTHDATE_POS  = 3
+)
+
 type BetReaderConfig struct {
 	BetPath   string
 	BetFile   string
@@ -45,12 +53,12 @@ func (reader *BetReader) BetBatch() protocol.BetBatch {
 			reader.close()
 			return batch
 		}
-		number, _ := strconv.Atoi(record[4])
+		number, _ := strconv.Atoi(record[BET_NUMBER_POS])
 		bet := protocol.Bet{
-			Name:        record[0],
-			Surname:     record[1],
-			PersonalId:  record[2],
-			Birthdate:   record[3],
+			Name:        record[NAME_POS],
+			Surname:     record[SURNAME_POS],
+			PersonalId:  record[ID_POS],
+			Birthdate:   record[BIRTHDATE_POS],
 			BetedNumber: uint32(number),
 		}
 		batch.Bets = append(batch.Bets, bet)

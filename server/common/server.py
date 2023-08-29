@@ -37,11 +37,10 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        bet = BetReader()
         while client_sock.active:
             try:
-                bet = BetReader()
                 client_sock.read(bet)
-                bet.process_bets()
             except OSError as e:
                 logging.error("action: receive_message | result: fail | error: {e}")
             except CloseException as e:

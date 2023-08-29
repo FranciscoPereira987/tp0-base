@@ -33,50 +33,50 @@ func NewBetConn(addr string, id int) (*BetConn, error) {
 	return betConn, nil
 }
 
-func (this *BetConn) Close() error {
-	this.Write(&protocol.End{})
-	return this.shutdown()
+func (conn *BetConn) Close() error {
+	conn.Write(&protocol.End{})
+	return conn.shutdown()
 }
 
-func (this *BetConn) Write(message protocol.Message) error {
-	if !this.active {
-		return errors.New("Connection closed")
+func (conn *BetConn) Write(message protocol.Message) error {
+	if !conn.active {
+		return errors.New("connection closed")
 	}
 
 	stream := message.Serialize()
 
-	err := this.writeBytes(stream)
+	err := conn.writeBytes(stream)
 
 	if message.ShouldAck() {
 
 		ack := &protocol.Ack{}
-		err = this.Read(ack)
+		err = conn.Read(ack)
 	}
 
 	return err
 }
 
-func (this *BetConn) Read(message protocol.Message) error {
-	if !this.active {
-		return errors.New("Connection closed")
+func (conn *BetConn) Read(message protocol.Message) error {
+	if !conn.active {
+		return errors.New("connection closed")
 	}
-	header, err := this.peak()
+	header, err := conn.peak()
 	if err != nil {
 		return err
 	}
 
-	err = this.readMessage(header, message)
+	err = conn.readMessage(header, message)
 
 	return err
 }
 
-func (this *BetConn) helloServer() error {
+func (conn *BetConn) helloServer() error {
 	message := &protocol.Hello{
-		ClientID: uint32(this.id),
+		ClientID: uint32(conn.id),
 	}
-	this.active = true
+	conn.active = true
 
-	err := this.Write(message)
+	err := conn.Write(message)
 
 	if err != nil {
 		return err
@@ -85,31 +85,31 @@ func (this *BetConn) helloServer() error {
 	return err
 }
 
-func (this *BetConn) shutdown() error {
-	if !this.active {
+func (conn *BetConn) shutdown() error {
+	if !conn.active {
 		return nil
 	}
-	this.active = false
-	return this.conn.Close()
+	conn.active = false
+	return conn.conn.Close()
 }
 
-func (this *BetConn) peak() ([]byte, error) {
-	return this.readBytes(4)
+func (conn *BetConn) peak() ([]byte, error) {
+	return conn.readBytes(protocol.HEADER_SIZE)
 }
 
-func (this *BetConn) readBytes(bytes int) ([]byte, error) {
+func (conn *BetConn) readBytes(bytes int) ([]byte, error) {
 	if bytes < 0 {
-		return nil, errors.New(fmt.Sprintf("Invalid read amount: %d", bytes))
+		return nil, fmt.Errorf("invalid read amount: %d", bytes)
 	}
 
 	buff := make([]byte, bytes)
-	readed, err := this.conn.Read(buff)
+	readed, err := conn.conn.Read(buff)
 
 	var chunk_size int
 	for readed < bytes && err == nil {
-		chunk_size, err = this.conn.Read(buff[readed:])
+		chunk_size, err = conn.conn.Read(buff[readed:])
 		if chunk_size == 0 {
-			err = errors.New("Broken connection")
+			err = errors.New("broken connection")
 		}
 		readed += chunk_size
 	}
@@ -117,14 +117,14 @@ func (this *BetConn) readBytes(bytes int) ([]byte, error) {
 	return buff, err
 }
 
-func (this *BetConn) writeBytes(bytes []byte) error {
+func (conn *BetConn) writeBytes(bytes []byte) error {
 	var chunk_size int
-	writen, err := this.conn.Write(bytes)
+	writen, err := conn.conn.Write(bytes)
 
 	for writen < len(bytes) && err == nil {
-		chunk_size, err = this.conn.Write(bytes[writen:])
+		chunk_size, err = conn.conn.Write(bytes[writen:])
 		if chunk_size == 0 {
-			err = errors.New("Broken connection")
+			err = errors.New("broken connection")
 		}
 		writen += chunk_size
 	}
@@ -132,33 +132,51 @@ func (this *BetConn) writeBytes(bytes []byte) error {
 	return err
 }
 
-func (this *BetConn) manageInvalidMessage(message []byte, original error) error {
-	end := new(protocol.End)
-	if end.Deserialize(message) == nil {
-		ack := new(protocol.Ack)
-		this.Write(ack)
-		this.shutdown()
-		return errors.New("Connection closed by server")
+func (conn *BetConn) manageInvalidMessage(message []byte, original error) error {
+
+	if conn.isEndMessage(message) {
+		conn.sendAck()
+		conn.shutdown()
+		return errors.New("connection closed by server")
 	}
-	err := new(protocol.Err)
-	if err.Deserialize(message) == nil {
-		return errors.New("Recieved Err message")
+
+	if conn.isErrMessage(message) {
+		return errors.New("recieved Err message")
 	}
 	return original
 }
 
-func (this *BetConn) readMessage(header []byte, expected protocol.Message) error {
+func (conn *BetConn) isEndMessage(message []byte) bool {
+	end := new(protocol.End)
+	return conn.isMessage(message, end)
+}
+
+func (conn *BetConn) isErrMessage(message []byte) bool {
+	err := new(protocol.Err)
+	return conn.isMessage(message, err)
+}
+
+func (conn *BetConn) isMessage(message []byte, messageType protocol.Message) bool {
+	return messageType.Deserialize(message) == nil
+}
+
+func (conn *BetConn) sendAck() error {
+	ack := new(protocol.Ack)
+	return conn.Write(ack)
+}
+
+func (conn *BetConn) readMessage(header []byte, expected protocol.Message) error {
 	length, err := protocol.GetMessageLength(header)
 
 	if err != nil {
 		return err
 	}
 
-	if length < 4 {
-		return errors.New("Malformed message read")
+	if length < protocol.HEADER_SIZE {
+		return errors.New("malformed message read")
 	}
 
-	message, err := this.readBytes(length - 4)
+	message, err := conn.readBytes(length - protocol.HEADER_SIZE)
 
 	if err != nil {
 		return err
@@ -168,7 +186,11 @@ func (this *BetConn) readMessage(header []byte, expected protocol.Message) error
 	err = expected.Deserialize(message)
 
 	if err != nil {
-		err = this.manageInvalidMessage(message, err)
+		err = conn.manageInvalidMessage(message, err)
+	}
+
+	if err == nil && expected.ShouldAck() {
+		err = conn.sendAck()
 	}
 
 	return err

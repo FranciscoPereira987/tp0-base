@@ -4,17 +4,17 @@ import "errors"
 
 type End struct{}
 
-func (this *End) Serialize() []byte {
+func (end *End) Serialize() []byte {
 	return buildHeader([]byte{END_OP}, 0)
 }
 
-func (this *End) Deserialize(stream []byte) error {
-	if !compareStreams(this.Serialize(), stream) {
-		return errors.New("Invalid end message")
+func (end *End) Deserialize(stream []byte) error {
+	if !compareStreams(end.Serialize(), stream) {
+		return errors.New("invalid end message")
 	}
 	return nil
 }
 
-func (this *End) ShouldAck() bool {
+func (end *End) ShouldAck() bool {
 	return true
 }

@@ -9,28 +9,33 @@ from common.utils import store_bets
 class BetReader(Message):
 
     def __init__(self) -> None:
-        self.bets = []
-
+        self.__bets = []
+        
     def deserialize(self, stream: bytes) -> bool:
         return self.__process_stream(stream)
     
     def serialize(self) -> bytes:
         return super().serialize()
     
-    def process_bets(self) -> None:
+    def process_bets(self) -> bool:
         """
             Stores the readed bets
         """
-        store_bets(self.bets)
-        for bet in self.bets:
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | number: {bet.number}')
+        try:
+            store_bets(self.__bets)
+            for bet in self.__bets:
+                logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | number: {bet.number}')
+            return True
+        except Exception as e:
+            loggin.info(f"action: apuesta_almacenada | result: fail | error: {e}")
+            return False
 
     def __process_stream(self, stream: bytes) -> bool:
         """
             Processes a stream of bytes, storing the parsed bets
             the stream can be composed of either a single bet or a batch
         """
-        self.bets = []
+        self.__bets = []
         result = False
         if len(stream) < Message.HEADER_SIZE:
             return False
@@ -38,12 +43,11 @@ class BetReader(Message):
         if stream[:1] == BetMessage.BET_OP:
             bet_message = BetMessage()
             result = bet_message.deserialize(stream)
-            self.bets = [bet_message.bet]
+            self.__bets = [bet_message.bet]
             
         elif stream[:1] == BetBatchMessage.BETBATCH_OP:
             message = BetBatchMessage()
             result = message.deserialize(stream)
-            self.bets = [bet.bet for bet in message.bets]
+            self.__bets = [bet.bet for bet in message.bets]
         
-        return result
-        
+        return result and self.process_bets()
