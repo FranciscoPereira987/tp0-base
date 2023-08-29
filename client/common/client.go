@@ -36,6 +36,7 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config:  config,
 		running: false,
+		waitGroup: sync.WaitGroup{},
 	}
 	return client
 }

@@ -3,6 +3,10 @@ PWD := $(shell pwd)
 
 GIT_REMOTE = github.com/7574-sistemas-distribuidos/docker-compose-init
 
+#Agrego la definicion de CLIENTS en caso de que no se defina al momento de correr 
+# make docker-compose-up
+CLIENTS ?= 3
+
 default: build
 
 all:
