@@ -1,8 +1,12 @@
 package common
 
 import (
+	"encoding/csv"
+	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -18,7 +22,8 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
-	Bet protocol.Bet
+	BetPath string
+	BatchSize int
 }
 
 // Client Entity that encapsulates how
@@ -26,6 +31,7 @@ type Client struct {
 	config     ClientConfig
 	conn       *connection.BetConn
 	stopNotify <-chan bool
+	stopChan chan<- bool
 	running    bool
 	waitGroup  sync.WaitGroup
 }
@@ -69,22 +75,34 @@ func (c *Client) isRunning() bool {
 	return c.running
 }
 
+func (c *Client) stop() {
+	if c.running {
+		select {
+		case c.running = <- c.stopNotify:
+		default:
+			c.stopChan <- true
+		}
+		close(c.stopChan)
+		c.running = false
+	}
+}
+
 // Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
 
 	stopNotify := make(chan bool, 1)
-
+	stopChan := make(chan bool, 1)
 	c.stopNotify = stopNotify
 	c.running = true
+	c.stopChan = stopChan
 
-	go c.manageStatus(stopNotify)
+	go c.manageStatus(stopNotify, stopChan)
 }
 
 // Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c *Client) manageStatus(stopNotify chan<- bool) {
+func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
 	c.waitGroup.Add(1)
 	listener := make(chan os.Signal)
-	timeout := time.After(c.config.LoopLapse)
 
 	signal.Notify(listener, syscall.SIGTERM)
 
@@ -96,10 +114,9 @@ func (c *Client) manageStatus(stopNotify chan<- bool) {
 	case <-listener:
 		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
 			c.config.ID)
-	case <-timeout:
-		log.Infof("action: timeout_detected | result: success | client_id: %v",
-			c.config.ID,
-		)
+	case <-stopChan:
+		log.Infof("action: finished_processing_bets | result: success | client_id: %v",
+			c.config.ID)
 	}
 	stopNotify <- true
 }
@@ -108,8 +125,14 @@ func (c *Client) manageStatus(stopNotify chan<- bool) {
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
-	c.setStatusManager()
+	
 	c.createClientSocket()
+	file, err := os.Open(fmt.Sprintf("%s-%s.csv", c.config.BetPath, c.config.ID))
+	if err != nil {
+		return
+	}
+	c.setStatusManager()
+	reader := csv.NewReader(file)
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 
@@ -117,9 +140,33 @@ func (c *Client) StartClientLoop() {
 		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		err := c.conn.Write(&c.config.Bet) 
+		bets := make([]protocol.Bet, 0)
+		for i := 0; i < c.config.BatchSize; i++{
+
+			record, err := reader.Read()
+			if err == io.EOF {
+				c.stop()
+			}
+			if err != nil {
+				break
+			}
+			number, _ := strconv.Atoi(record[4])
+			bet := protocol.Bet{
+				Name: record[0],
+				Surname: record[1],
+				PersonalId: record[2],
+				Birthdate: record[3],
+				BetedNumber: uint32(number),
+			}
+			bets = append(bets, bet)
+		}
+		batch := protocol.BetBatch{
+			Bets: bets,
+		}
+		
+		err = c.conn.Write(&batch) 
 		msgID++
-		c.conn.Close()
+		
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -128,13 +175,14 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
+		/*
 		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
-			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
-
+			bet.PersonalId, bet.BetedNumber)		
+		*/
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-
+	c.conn.Close()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	c.waitGroup.Wait()
 }
