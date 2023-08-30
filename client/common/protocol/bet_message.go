@@ -1,6 +1,9 @@
 package protocol
 
-import "errors"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 type Bet struct {
 	Name       string
@@ -70,11 +73,12 @@ func (bet Bet) deserializeFieldLength(stream *[]byte) (int, error) {
 	if len(*stream) == 0 {
 		return 0, errors.New("stream is shorter than expected")
 	}
-	length := int((*stream)[0])
-
+	fieldSize := []byte{0, (*stream)[0]}
+	length := binary.BigEndian.Uint16(fieldSize)
+	
 	*stream = (*stream)[1:]
 
-	return length, nil
+	return int(length), nil
 }
 
 func (bet Bet) getFieldFromStream(stream *[]byte) (string, error) {

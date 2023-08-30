@@ -1,6 +1,7 @@
 class Message():
 
     HEADER_SIZE = 4
+    ENDIAN = "big"
 
     def serialize(self) -> bytes:
         pass
@@ -19,11 +20,7 @@ class Message():
     
     def _build_header(self, header: bytes, size: int) -> bytes:
         size += self.HEADER_SIZE
-        shift = 16
-        while shift >= 0:
-            header = header + bytes([(size>>shift) & 0xff])
-            shift -= 8
-        return header
+        return header + size.to_bytes(3, self.ENDIAN, signed=False)
 
     def _compare_streams(self, a: bytes, b: bytes) -> bool:
         
@@ -33,10 +30,7 @@ class Message():
         if len(stream) < self.HEADER_SIZE:
             return -1
         
-        length = 0
-        for i in range(1, 4):
-            length += int(stream[i]) << (8 * (3 - i))
-        return length
+        return int.from_bytes(stream[1:self.HEADER_SIZE], self.ENDIAN)
 
     def _check_header(self, stream: bytes, op_code: int) -> bool:
         length = self._get_message_length(stream)
@@ -44,21 +38,11 @@ class Message():
         return length == len(stream) and stream[:1] == op_code
     
     def _deserialize_uint32(self, stream: bytes) -> int:
-        number = 0
         
         if len(stream) != 4:
             return -1
         
-        for index, value in enumerate(stream):
-            number |= int(value) << (8 * (3 - index))
-
-        return number
+        return int.from_bytes(stream, self.ENDIAN, signed=False)
 
     def _serialize_uint32(self, num: int) -> bytes:
-        serialized = bytes()
-        shift = 24
-        while shift >= 0:
-            serialized += bytes([(num>>shift) & 0xff])
-            shift -= 8
-
-        return serialized
+        return num.to_bytes(4, self.ENDIAN, signed=False)

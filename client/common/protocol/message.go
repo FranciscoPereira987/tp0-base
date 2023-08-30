@@ -1,6 +1,9 @@
 package protocol
 
-import "errors"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 // OP codes definitions for Bet protocol messages
 var (
@@ -39,11 +42,10 @@ func compareStreams(a []byte, b []byte) (result bool) {
 
 func buildHeader(header []byte, size int) []byte {
 	size += HEADER_SIZE
-	for shift := 16; shift >= 0; shift -= 8 {
-		header = append(header, byte(size>>shift))
-	}
-
-	return header
+	totalSize := make([]byte, 4)
+	binary.BigEndian.PutUint32(totalSize, uint32(size))
+	totalSize[0] = header[0]
+	return totalSize
 }
 
 func GetMessageLength(stream []byte) (size int, err error) {
@@ -51,11 +53,10 @@ func GetMessageLength(stream []byte) (size int, err error) {
 		err = errors.New("invalid stream for message")
 		return
 	}
-
-	for i := 1; i < 4; i++ {
-		size += int(stream[i]) << (8 * (3 - i))
-	}
-
+	header := stream[0]
+	stream[0] = 0
+	size = int(binary.BigEndian.Uint32(stream))
+	stream[0] = header
 	return
 }
 
@@ -80,19 +81,13 @@ func deserializeUint32(stream *[]byte) (uint32, error) {
 		return number, errors.New("stream size is diferent than expected")
 	}
 
-	for index, value := range *stream {
-		number |= (uint32(value) << (8 * (3 - index)))
-	}
+	number = binary.BigEndian.Uint32(*stream)
 
 	return number, nil
 }
 
 func serializeUint32(stream *[]byte, number uint32) {
-	serialized := make([]byte, 0)
-
-	for shift := 24; shift >= 0; shift -= 8 {
-		serialized = append(serialized, byte(number>>shift))
-	}
-
-	*stream = append(*stream, serialized...)
+	bytenumber := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytenumber, number)
+	*stream = append(*stream, bytenumber...)
 }

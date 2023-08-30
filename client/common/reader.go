@@ -26,6 +26,7 @@ type BetReaderConfig struct {
 type BetReader struct {
 	config BetReaderConfig
 	file   *csv.Reader
+	fd     *os.File
 	open   bool
 }
 
@@ -45,13 +46,12 @@ func NewBetReader(config BetReaderConfig, id int) (*BetReader, error) {
 	return reader, nil
 }
 
-func (reader *BetReader) BetBatch() protocol.BetBatch {
+func (reader *BetReader) BetBatch() (protocol.BetBatch, error) {
 	batch := protocol.BetBatch{}
 	for i := 0; i < reader.config.BatchSize; i++ {
 		record, err := reader.file.Read()
 		if err != nil {
-			reader.close()
-			return batch
+			return batch, reader.Close()
 		}
 		number, _ := strconv.Atoi(record[BET_NUMBER_POS])
 		bet := protocol.Bet{
@@ -63,11 +63,12 @@ func (reader *BetReader) BetBatch() protocol.BetBatch {
 		}
 		batch.Bets = append(batch.Bets, bet)
 	}
-	return batch
+	return batch, nil
 }
 
-func (reader *BetReader) close() {
+func (reader *BetReader) Close() error {
 	reader.open = false
+	return reader.fd.Close()
 }
 
 func (reader BetReader) BetsLeft() bool {

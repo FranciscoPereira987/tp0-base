@@ -53,7 +53,7 @@ class BetMessage(Message):
     def __deserialize_field_length(self, stream: bytes) -> int:
         if len(stream) == 0:
             return -1
-        return int(stream[0])
+        return int.from_bytes(stream[:1], self.ENDIAN, signed=False)
 
     def __deserialize_field(self, field_length: int, stream: bytes) -> (str, int):
         if len(stream) < field_length:

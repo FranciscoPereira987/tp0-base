@@ -76,6 +76,7 @@ func (c *Client) stop() {
 		close(c.stopChan)
 		c.stopChan = nil
 		c.conn.Close()
+		c.config.Reader.Close()
 	}
 }
 
@@ -128,9 +129,13 @@ func (c *Client) StartClientLoop() {
 		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		batch := c.config.Reader.BetBatch()
+		batch, err := c.config.Reader.BetBatch()
 
-		err := c.conn.Write(&batch)
+		if err != nil {
+			log.Errorf("action: batch_read | result: error | info: %s", err)
+		}
+
+		err = c.conn.Write(&batch)
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
