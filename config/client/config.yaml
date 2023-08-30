@@ -12,3 +12,7 @@ bet:
   id: "41797243"
   birthdate: "1998-12-17"
   beted_number: 4567
+batch_size: 7
+dataset:
+  path: "./dataset/"
+  file: "agency-%d.csv"

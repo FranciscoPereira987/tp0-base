@@ -8,17 +8,16 @@ import (
 	"time"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
-	ID            string
+	ID            int
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
-	Bet protocol.Bet
+	Reader        *BetReader
 }
 
 // Client Entity that encapsulates how
@@ -26,16 +25,17 @@ type Client struct {
 	config     ClientConfig
 	conn       *connection.BetConn
 	stopNotify <-chan bool
-	running bool
-	waitGroup sync.WaitGroup
+	stopChan   chan<- bool
+	running    bool
+	waitGroup  sync.WaitGroup
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config:  config,
-		running: false,
+		config:    config,
+		running:   false,
 		waitGroup: sync.WaitGroup{},
 	}
 	return client
@@ -65,28 +65,38 @@ func (c *Client) isRunning() bool {
 		select {
 		case c.running = <-c.stopNotify:
 		default:
-
+			c.running = c.config.Reader.BetsLeft()
 		}
 	}
 	return c.running
+}
+
+func (c *Client) stop() {
+	if c.stopChan != nil {
+		c.stopChan <- true
+		close(c.stopChan)
+		c.stopChan = nil
+		c.conn.Close()
+		c.config.Reader.Close()
+	}
 }
 
 // Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
 
 	stopNotify := make(chan bool, 1)
-
+	stopChan := make(chan bool, 1)
 	c.stopNotify = stopNotify
 	c.running = true
+	c.stopChan = stopChan
 
-	go c.manageStatus(stopNotify)
+	go c.manageStatus(stopNotify, stopChan)
 }
 
 // Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c *Client) manageStatus(stopNotify chan<- bool) {
+func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
 	c.waitGroup.Add(1)
-	listener := make(chan os.Signal)
-	timeout := time.After(c.config.LoopLapse)
+	listener := make(chan os.Signal, 1)
 
 	signal.Notify(listener, syscall.SIGTERM)
 
@@ -98,10 +108,9 @@ func (c *Client) manageStatus(stopNotify chan<- bool) {
 	case <-listener:
 		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
 			c.config.ID)
-	case <-timeout:
-		log.Infof("action: timeout_detected | result: success | client_id: %v",
-			c.config.ID,
-		)
+	case <-stopChan:
+		log.Infof("action: finished_processing_bets | result: success | client_id: %v",
+			c.config.ID)
 	}
 	stopNotify <- true
 }
@@ -110,18 +119,25 @@ func (c *Client) manageStatus(stopNotify chan<- bool) {
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
+
+	c.createClientSocket()
 	c.setStatusManager()
+
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 		
-		c.createClientSocket()
+		
 		// Create the connection the server in every loop iteration. Send an
 		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		err := c.conn.Write(&c.config.Bet) 
-		msgID++
-		c.conn.Close()
+		batch, err := c.config.Reader.BetBatch()
+
+		if err != nil {
+			log.Errorf("action: batch_read | result: error | info: %s", err)
+		}
+
+		err = c.conn.Write(&batch)
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -130,13 +146,14 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
-		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
-			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
-		c.conn.Close()
+
+		log.Infof("action: apuestas_enviadas | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
+		msgID++
+
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-
+	c.stop()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	c.waitGroup.Wait()
 }

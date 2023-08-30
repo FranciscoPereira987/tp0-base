@@ -4,8 +4,9 @@ import signal
 
 from common.bet_conn import BetConn, BetConnListener
 from common.protocol.bet_message import BetMessage
-from common.exceptions import CloseException
+from common.exceptions import BrokenConnectionException, CloseException
 from common.utils import store_bets
+from common.bet import BetReader
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -36,17 +37,19 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        try:
-            bet = BetMessage()
-            client_sock.read(bet)
-            store_bets([bet.bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.bet.document} | number: {bet.bet.number}')
-        except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
-        except CloseException as e:
-            logging.error(f"action: recieve_message | result: failed | connection: {e}")
-        finally:
-            client_sock.close()
+        bet = BetReader()
+        while client_sock.active:
+            try:
+                client_sock.read(bet)
+            except OSError as e:
+                logging.error("action: receive_message | result: fail | error: {e}")
+            except CloseException as e:
+                logging.error(f"action: recieve_message | result: failed | connection: {e}")
+            except BrokenConnectionException as e:
+                logging.error(f"action: recieve_message | result: failed | connection: {e}")
+            finally:
+                pass
+        client_sock.close()
 
     def __accept_new_connection(self) -> BetConn:
         """
