@@ -1,6 +1,9 @@
 package protocol
 
-import "errors"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 type Bet struct {
 	Name       string
@@ -11,52 +14,52 @@ type Bet struct {
 	BetedNumber uint32
 }
 
-func (this *Bet) ShouldAck() bool {
+func (bet *Bet) ShouldAck() bool {
 	return true
 }
 
-func (this Bet) makeHeader() []byte {
+func (bet Bet) makeHeader() []byte {
 	length := EXTRA_BET_BYTES +
-		len(this.Name) +
-		len(this.Surname) +
-		len(this.PersonalId) +
-		len(this.Birthdate)
+		len(bet.Name) +
+		len(bet.Surname) +
+		len(bet.PersonalId) +
+		len(bet.Birthdate)
 
 	header := []byte{BET_OP}
 
 	return buildHeader(header, length)
 }
 
-func (this Bet) addField(stream *[]byte, field string) {
+func (bet Bet) addField(stream *[]byte, field string) {
 	*stream = append(*stream, byte(len(field)))
 
 	*stream = append(*stream, []byte(field)...)
 }
 
-func (this Bet) addBetNumbet(stream *[]byte) {
-	serializeUint32(stream, this.BetedNumber)
+func (bet Bet) addBetNumbet(stream *[]byte) {
+	serializeUint32(stream, bet.BetedNumber)
 }
 
-func (this Bet) addBody(stream *[]byte) {
-	this.addField(stream, this.Name)
-	this.addField(stream, this.Surname)
-	this.addField(stream, this.PersonalId)
-	this.addField(stream, this.Birthdate)
+func (bet Bet) addBody(stream *[]byte) {
+	bet.addField(stream, bet.Name)
+	bet.addField(stream, bet.Surname)
+	bet.addField(stream, bet.PersonalId)
+	bet.addField(stream, bet.Birthdate)
 
-	this.addBetNumbet(stream)
+	bet.addBetNumbet(stream)
 
 }
 
-func (this *Bet) Serialize() []byte {
-	serialized := this.makeHeader()
-	this.addBody(&serialized)
+func (bet *Bet) Serialize() []byte {
+	serialized := bet.makeHeader()
+	bet.addBody(&serialized)
 	return serialized
 }
 
-func (this Bet) deserializeField(fieldLength int, stream *[]byte) (string, error) {
+func (bet Bet) deserializeField(fieldLength int, stream *[]byte) (string, error) {
 	field := ""
 	if len(*stream) < fieldLength {
-		return field, errors.New("Stream is shorter than expected")
+		return field, errors.New("stream is shorter than expected")
 	}
 
 	field = string((*stream)[:fieldLength])
@@ -66,33 +69,34 @@ func (this Bet) deserializeField(fieldLength int, stream *[]byte) (string, error
 	return field, nil
 }
 
-func (this Bet) deserializeFieldLength(stream *[]byte) (int, error) {
+func (bet Bet) deserializeFieldLength(stream *[]byte) (int, error) {
 	if len(*stream) == 0 {
-		return 0, errors.New("Stream is shorter than expected")
+		return 0, errors.New("stream is shorter than expected")
 	}
-	length := int((*stream)[0])
-
+	fieldSize := []byte{0, (*stream)[0]}
+	length := binary.BigEndian.Uint16(fieldSize)
+	
 	*stream = (*stream)[1:]
 
-	return length, nil
+	return int(length), nil
 }
 
-func (this Bet) getFieldFromStream(stream *[]byte) (string, error) {
-	fieldLength, err := this.deserializeFieldLength(stream)
+func (bet Bet) getFieldFromStream(stream *[]byte) (string, error) {
+	fieldLength, err := bet.deserializeFieldLength(stream)
 	field := ""
 	if err == nil {
-		field, err = this.deserializeField(fieldLength, stream)
+		field, err = bet.deserializeField(fieldLength, stream)
 	}
 
 	return field, err
 
 }
 
-func (this Bet) deserializeBet(stream *[]byte) (uint32, error) {
+func (bet Bet) deserializeBet(stream *[]byte) (uint32, error) {
 	return deserializeUint32(stream)
 }
 
-func (this *Bet) Deserialize(stream []byte) (err error) {
+func (bet *Bet) Deserialize(stream []byte) (err error) {
 	fields := make([]string, 0)
 	var field string
 	var betedNumber uint32
@@ -106,19 +110,19 @@ func (this *Bet) Deserialize(stream []byte) (err error) {
 	stream = stream[HEADER_SIZE:]
 
 	for i := 0; i < 4 && err == nil; i++ {
-		field, err = this.getFieldFromStream(&stream)
+		field, err = bet.getFieldFromStream(&stream)
 
 		fields = append(fields, field)
 	}
 
 	if err == nil {
-		betedNumber, err = this.deserializeBet(&stream)
+		betedNumber, err = bet.deserializeBet(&stream)
 
-		this.Name = fields[0]
-		this.Surname = fields[1]
-		this.PersonalId = fields[2]
-		this.Birthdate = fields[3]
-		this.BetedNumber = betedNumber
+		bet.Name = fields[0]
+		bet.Surname = fields[1]
+		bet.PersonalId = fields[2]
+		bet.Birthdate = fields[3]
+		bet.BetedNumber = betedNumber
 	}
 
 	return err
