@@ -47,6 +47,7 @@ func NewClient(config ClientConfig) *Client {
 func (c *Client) createClientSocket() error {
 	conn, err := connection.NewBetConn(c.config.ServerAddress, c.config.ID)
 	if err != nil {
+		
 		log.Fatalf(
 			"action: connect | result: fail | client_id: %v | error: %v",
 			c.config.ID,
@@ -124,7 +125,8 @@ func (c *Client) StartClientLoop() {
 
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
-
+		
+		
 		// Create the connection the server in every loop iteration. Send an
 		//c.createClientSocket()
 
@@ -144,6 +146,7 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
+
 		log.Infof("action: apuestas_enviadas | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
 		msgID++
 

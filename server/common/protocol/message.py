@@ -46,3 +46,4 @@ class Message():
 
     def _serialize_uint32(self, num: int) -> bytes:
         return num.to_bytes(4, self.ENDIAN, signed=False)
+
