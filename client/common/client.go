@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,13 +17,13 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
-	Reader        *BetReader
+	Bet protocol.Bet
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	conn   *connection.BetConn
 	stopNotify chan os.Signal
 	timerNotify <-chan time.Time
 	running bool
@@ -60,8 +61,7 @@ func (c *Client) createClientSocket() error {
 func (c *Client) stop() {
 	defer close(c.stopNotify)
 	defer c.conn.Close()
-  defer c.config.Reader.Close()
-  c.running = false
+ 	c.running = false
 }
 
 //Returns if the client is running
@@ -79,20 +79,11 @@ func (c *Client) isRunning() bool {
 			)
 			c.stop()
 		default:
-			c.running = c.config.Reader.BetsLeft()
 		}
 	}
 	return c.running
 }
 
-func (c *Client) stop() {
-	if c.stopChan != nil {
-		c.stopChan <- true
-		close(c.stopChan)
-		c.stopChan = nil
-		
-	}
-}
 
 // Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
@@ -118,21 +109,16 @@ func (c *Client) StartClientLoop() {
 	c.createClientSocket()
 	c.setStatusManager()
 
-	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() {
 		
-		
+		c.createClientSocket()
 		// Create the connection the server in every loop iteration. Send an
 		//c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		batch, err := c.config.Reader.BetBatch()
-
-		if err != nil {
-			log.Errorf("action: batch_read | result: error | info: %s", err)
-		}
-
-		err = c.conn.Write(&batch)
+		err := c.conn.Write(&c.config.Bet) 
+		msgID++
+		c.conn.Close()
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -141,10 +127,9 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
-
-		log.Infof("action: apuestas_enviadas | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
-		msgID++
-
+		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
+			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
+		c.conn.Close()
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
