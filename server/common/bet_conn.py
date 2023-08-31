@@ -28,7 +28,7 @@ class BetConnListener():
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
-#TODO: Mejorar la logica de lectura de paquetes no esperados o erroneos
+
 class BetConn():
     
     def __init__(self, conn: socket.socket) -> None:
@@ -193,7 +193,7 @@ class BetConn():
             Reads size bytes from the socket
             Ref: https://docs.python.org/3/howto/sockets.html
         """
-        #TODO: Fix short read
+        
         if size < 0:
             raise MalformedMessageException()
         chunks = []

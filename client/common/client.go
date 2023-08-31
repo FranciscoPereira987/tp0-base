@@ -130,7 +130,7 @@ func (c *Client) StartClientLoop() {
 		// Create the connection the server in every loop iteration. Send an
 		//c.createClientSocket()
 
-		// TODO: Modify the send to avoid short-write
+		
 		batch, err := c.config.Reader.BetBatch()
 
 		if err != nil {
