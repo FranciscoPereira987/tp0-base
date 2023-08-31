@@ -53,6 +53,11 @@ func Test4ByteMessagesSerialization(t *testing.T) {
 			&End{},
 			[]byte{END_OP, 0, 0, 4},
 		},
+		{
+			"Winners Message",
+			&Winners{},
+			[]byte{WINN_OP, 0, 0, 4},
+		},
 	}
 
 	for _, testcase := range tests {
@@ -86,6 +91,11 @@ func Test4ByteMessagesDeserialization(t *testing.T) {
 			&End{},
 			[]byte{END_OP, 1, 0, 1},
 		},
+		{
+			"Winners Message",
+			&Winners{},
+			[]byte{WINN_OP, 1, 1, 1},
+		},
 	}
 
 	for _, testcase := range tests {
@@ -116,6 +126,13 @@ func TestBetAndBetBatchHeaders(t *testing.T) {
 				[]Bet{*bet, *bet, *bet, *bet, *bet, *bet, *bet, *bet},
 			},
 			[]byte{BETBATCH_OP, 0, 1, 116},
+		},
+		{
+			"WinnersResp header",
+			&WinnersResponse{
+				[]string{"41797243"},
+			},
+			[]byte{WINNRESP_OP, 0, 0, 13},
 		},
 	}
 
@@ -175,5 +192,27 @@ func TestBetBatchDeserialization(t *testing.T) {
 
 	if !compareBetBatch(batchTest, deserialized) {
 		t.Errorf("FAILED: Batch")
+	}
+}
+
+func TestWinnersRespDeserialization(t *testing.T) {
+	winnersResponse := &WinnersResponse{
+		[]string{"41797243"},
+	}
+
+	serialized := winnersResponse.Serialize()
+
+	result := new(WinnersResponse)
+
+	err := result.Deserialize(serialized)
+
+	if err != nil {
+		t.Fatalf("Failed to deserialize response")
+	}
+
+	for index, value := range result.winners{
+		if value != winnersResponse.winners[index]{
+			t.Fatalf("Unexpected value in result: %s", value)
+		}
 	}
 }

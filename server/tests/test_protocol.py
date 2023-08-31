@@ -7,6 +7,9 @@ from common.protocol.err_message import ErrMessage
 from common.protocol.bet_message import BetMessage
 from common.protocol.end_message import EndMessage
 from common.protocol.betbatch_message import BetBatchMessage
+from common.protocol.winners_message import WinnersMessage
+from common.protocol.winners_response_message import WinnersResponseMessage
+from common.utils import Bet
 
 class TestProtocol(unittest.TestCase):
   
@@ -51,6 +54,20 @@ class TestProtocol(unittest.TestCase):
 
     def test_err_message_deserialization(self):
         message = ErrMessage()
+        serialized = message.serialize()
+
+        self.assertTrue(message.deserialize(serialized))
+
+    def test_winners_message_serialization(self):
+        message = WinnersMessage()
+        expected = WinnersMessage.WINN_OP + bytes([0, 0, 4])
+
+        result = message.serialize()
+
+        self.assertListEqual(list(expected), list(result))
+
+    def test_winners_message_deserialization(self):
+        message = WinnersMessage()
         serialized = message.serialize()
 
         self.assertTrue(message.deserialize(serialized))
@@ -109,6 +126,25 @@ class TestProtocol(unittest.TestCase):
         result.deserialize(serialized)
 
         self.assertEquals(message, result)
+
+    def test_winners_response_message_serialization(self):
+        message = WinnersResponseMessage([Bet('0', "Francisco", "Pereira", "41797243", "1998-12-17", "12345")])
+        expected = message.WINNRESP_OP + bytes([0, 0, 13])
+
+        result = message.serialize()[:4]
+
+        self.assertListEqual(list(expected), list(result))
+
+    def test_bet_message_deserialization(self):
+        message = WinnersResponseMessage([Bet('0', "Francisco", "Pereira", "41797243", "1998-12-17", "12345")])
+        serialized = message.serialize()
+
+        result = WinnersResponseMessage()
+        
+        result.deserialize(serialized)
+
+        self.assertEqual(message, result)
+
 
 if __name__ == "__main__":
     unittest.main()

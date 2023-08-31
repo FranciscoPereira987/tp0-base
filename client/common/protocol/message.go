@@ -13,6 +13,8 @@ var (
 	BET_OP      = byte(0x04)
 	BETBATCH_OP = byte(0x05)
 	END_OP      = byte(0xff)
+	WINN_OP = byte(0x06)
+	WINNRESP_OP = byte(0x07)
 
 	EXTRA_BET_BYTES = 8
 
