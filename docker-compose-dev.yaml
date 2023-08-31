@@ -25,6 +25,7 @@ services:
       - testing_net
     volumes:
       - ./config/client:/config
+      - ./.data/dataset:/dataset
     depends_on:
       - server
 
@@ -39,6 +40,7 @@ services:
       - testing_net
     volumes:
       - ./config/client:/config
+      - ./.data/dataset:/dataset
     depends_on:
       - server
 
@@ -53,6 +55,7 @@ services:
       - testing_net
     volumes:
       - ./config/client:/config
+      - ./.data/dataset:/dataset
     depends_on:
       - server
 
