@@ -106,7 +106,6 @@ func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
 
-	c.createClientSocket()
 	c.setStatusManager()
 
 	for c.isRunning() {
@@ -118,7 +117,7 @@ func (c *Client) StartClientLoop() {
 		// TODO: Modify the send to avoid short-write
 		err := c.conn.Write(&c.config.Bet) 
 		msgID++
-		c.conn.Close()
+		
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -133,6 +132,5 @@ func (c *Client) StartClientLoop() {
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-	c.stop()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
