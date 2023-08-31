@@ -27,7 +27,7 @@ class TestProtocol(unittest.TestCase):
 
         serialized = message.serialize()
         result = HelloMessage(0)
-        result.deserialize(serialized)
+        result.deserialize(serialized, 0)
 
         self.assertEquals(expected_id, result.id)
 
@@ -42,7 +42,7 @@ class TestProtocol(unittest.TestCase):
         message = AckMessage()
         serialized = message.serialize()
 
-        self.assertTrue(message.deserialize(serialized))
+        self.assertTrue(message.deserialize(serialized, 0))
 
     def test_err_message_serialization(self):
         message = ErrMessage()
@@ -56,7 +56,7 @@ class TestProtocol(unittest.TestCase):
         message = ErrMessage()
         serialized = message.serialize()
 
-        self.assertTrue(message.deserialize(serialized))
+        self.assertTrue(message.deserialize(serialized, 0))
 
     def test_winners_message_serialization(self):
         message = WinnersMessage()
@@ -70,7 +70,7 @@ class TestProtocol(unittest.TestCase):
         message = WinnersMessage()
         serialized = message.serialize()
 
-        self.assertTrue(message.deserialize(serialized))
+        self.assertTrue(message.deserialize(serialized, 0))
 
     def test_end_message_serialization(self):
         message = EndMessage()
@@ -84,7 +84,7 @@ class TestProtocol(unittest.TestCase):
         message = EndMessage()
         serialized = message.serialize()
 
-        self.assertTrue(message.deserialize(serialized))
+        self.assertTrue(message.deserialize(serialized, 0))
 
     def test_bet_message_serialization(self):
         message = BetMessage("Francisco", "Pereira", "41797243", "1998-12-17", "12345")
@@ -100,7 +100,7 @@ class TestProtocol(unittest.TestCase):
 
         result = BetMessage()
         
-        result.deserialize(serialized)
+        result.deserialize(serialized, 0)
 
         self.assertEqual(message, result, f"\n{message.bet} \nvs\n {result.bet}")
         
@@ -123,7 +123,7 @@ class TestProtocol(unittest.TestCase):
         serialized = message.serialize()
 
         result = BetBatchMessage()
-        result.deserialize(serialized)
+        result.deserialize(serialized, 0)
 
         self.assertEquals(message, result)
 
@@ -141,7 +141,7 @@ class TestProtocol(unittest.TestCase):
 
         result = WinnersResponseMessage()
         
-        result.deserialize(serialized)
+        result.deserialize(serialized, 0)
 
         self.assertEqual(message, result)
 
