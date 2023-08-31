@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -25,9 +24,10 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-	stopNotify <-chan bool
+	stopNotify chan os.Signal
+	timerNotify <-chan time.Time
 	running bool
-	waitGroup sync.WaitGroup
+	
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -36,7 +36,6 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
 		running: false,
-		waitGroup: sync.WaitGroup{},
 	}
 	return client
 }
@@ -58,12 +57,25 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) stop() {
+	defer close(c.stopNotify)
+	c.running = false
+}
+
 //Returns if the client is running
 //If the client is running, checks if a signal has been recieved to shut down the client
 func (c *Client) isRunning() bool {
 	if c.running {
-		select{
-		case c.running = <-c.stopNotify:
+		select {
+		case <-c.stopNotify:
+			log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
+				c.config.ID)
+			c.stop()
+		case <-c.timerNotify:
+			log.Infof("action: timeout_detected | result: success | client_id: %v",
+				c.config.ID,
+			)
+			c.stop()
 		default:
 
 		}
@@ -75,36 +87,14 @@ func (c *Client) isRunning() bool {
 //Sets the c.stopNotify channel and starts up manageStatus 
 func (c *Client) setStatusManager() {
 	
-	stopNotify := make(chan bool)
+	stopNotify := make(chan os.Signal)
+	timerNotify := time.After(c.config.LoopLapse)
 
+	signal.Notify(stopNotify, syscall.SIGTERM)
 	c.stopNotify = stopNotify
+	c.timerNotify = timerNotify
 	c.running = true
 	
-	go c.manageStatus(stopNotify)
-}
-
-// Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c *Client) manageStatus(stopNotify chan<- bool) {
-	c.waitGroup.Add(1)
-	listener := make(chan os.Signal)
-	timeout := time.After(c.config.LoopLapse)
-
-	signal.Notify(listener, syscall.SIGTERM)
-
-	defer c.waitGroup.Done()
-	defer close(listener)
-	defer close(stopNotify)
-
-	select {
-	case <-listener:
-		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
-			c.config.ID)
-	case <-timeout:
-		log.Infof("action: timeout_detected | result: success | client_id: %v",
-			c.config.ID,
-		)
-	}
-	stopNotify <- true
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
@@ -146,5 +136,4 @@ func (c *Client) StartClientLoop() {
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-	c.waitGroup.Wait()
 }
