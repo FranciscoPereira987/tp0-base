@@ -27,7 +27,7 @@ class BetReader(Message):
                 logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | number: {bet.number}')
             return True
         except Exception as e:
-            loggin.info(f"action: apuesta_almacenada | result: fail | error: {e}")
+            logging.info(f"action: apuesta_almacenada | result: fail | error: {e}")
             return False
 
     def __process_stream(self, stream: bytes) -> bool:
