@@ -8,12 +8,14 @@ from common.protocol.message import Message
 from common.exceptions import BrokenConnectionException, CloseException, ErrRecievedException, MalformedMessageException, UnexpectedMessageException
 from common.protocol.end_message import EndMessage
 from common.protocol.err_message import ErrMessage
+from common.winners_manager import WinnersErrHandler, WinnersHandler, WinnersRespHandler
 
 
 class BetConnListener():
     
     # Initialices a BetConn that can listen for connections
     def __init__(self, port: int, listen_backlog: int) -> None:
+        self.missing = listen_backlog
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(('', port))
         self.socket.listen(listen_backlog)
@@ -21,20 +23,27 @@ class BetConnListener():
     def accept(self) -> ('BetConn', str):
         new_conn, addr = self.socket.accept()
         
-        return BetConn(new_conn), addr
+        return BetConn(new_conn, self.__load_handler()), addr
+    
+    def update_missing(self):
+        self.missing -= 1
     
     def close(self):
         #TODO: Add log entries
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
+    def __load_handler(self) -> WinnersHandler:
+        return WinnersErrHandler() if self.missing > 0 else WinnersRespHandler()
+
 
 class BetConn():
     
-    def __init__(self, conn: socket.socket) -> None:
+    def __init__(self, conn: socket.socket, handler: WinnersHandler) -> None:
         self.socket = conn
         self.id = 0
         self.active = True
+        self.winners = handler
         self.__accept_connection()
 
     def read(self, message: Message) -> None:
@@ -79,7 +88,7 @@ class BetConn():
             if the client has closed the connection by sending an end message
             it responds to the client and closes the socket.
         """
-        result = expected.deserialize(recieved)
+        result = expected.deserialize(recieved, self.id)
 
         if result and expected.should_ack():
             self.__send_ack()
@@ -90,6 +99,9 @@ class BetConn():
         elif not result and self.__recover_err_message(recieved):
             raise ErrRecievedException()
         
+        elif not result and self.winners.check_winners(recieved):
+            self.write(self.winners.handle_winners(self.id))
+
         elif not result:
             self.__send_err()
             raise MalformedMessageException()
@@ -112,7 +124,7 @@ class BetConn():
             Whenever an EndMessage is recovered, returns True
         """
         end = EndMessage()
-        result = end.deserialize(message)
+        result = end.deserialize(message, self.id)
         if result:
             logging.info(f"action: connection_close  | result: in_progress | error: Recieved End message")
             self.__send_ack()
@@ -123,13 +135,13 @@ class BetConn():
         """
             Returns True if an ErrMessage is recovered from the stream
         """
-        return ErrMessage().deserialize(message)
+        return ErrMessage().deserialize(message, self.id)
     
     def __recover_ack_message(self, message: bytes) -> bool:
         """
             Returns True if an AckMessage is recovered from the stream
         """
-        return AckMessage().deserialize(message)
+        return AckMessage().deserialize(message, self.id)
 
     def __wait_end(self) -> None:
         """
@@ -141,7 +153,7 @@ class BetConn():
         self.__write_bytes(end_message.serialize())
         readed = self.__read_message(end_message)
         
-        if end_message.deserialize(readed):
+        if end_message.deserialize(readed, self.id):
             self.__send_ack()
             readed = self.__read_message(end_message)
 

@@ -13,6 +13,10 @@ func (wr *WinnersResponse) ShouldAck() bool {
 	return false
 }
 
+func (wr WinnersResponse) TotalWinners() int{
+	return len(wr.winners)
+}
+
 func (wr WinnersResponse) addField(stream *[]byte, field string) {
 	*stream = append(*stream, byte(len(field)))
 

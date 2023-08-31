@@ -50,7 +50,7 @@ class WinnersResponseMessage(Message):
         field, err = self.__deserialize_field(field_length, stream)
         return field, err
     
-    def deserialize(self, stream: bytes) -> bool:
+    def deserialize(self, stream: bytes, agency: int) -> bool:
         if not self._check_header(stream, self.WINNRESP_OP):
             return False
 

@@ -72,14 +72,14 @@ class BetMessage(Message):
         field, err = self.__deserialize_field(field_length, stream)
         return field, err
 
-    def deserialize(self, stream: bytes) -> bool:
+    def deserialize(self, stream: bytes, agency: int) -> bool:
         if not self._check_header(stream, self.BET_OP):
             
             return False
         
         stream = stream[self.HEADER_SIZE:]
         
-        fields = ['0']
+        fields = [str(agency)]
         for _ in range(4):
             field, field_size =\
                 self.__get_field_from_stream(stream)

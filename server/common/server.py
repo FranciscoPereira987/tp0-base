@@ -48,6 +48,7 @@ class Server:
             finally:
                 pass
         client_sock.close()
+        self._server_socket.update_missing()
 
     def __accept_new_connection(self) -> BetConn:
         """

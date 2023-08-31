@@ -15,7 +15,7 @@ class HelloMessage(Message):
 
         return stream
     
-    def deserialize(self, stream: bytes) -> bool:
+    def deserialize(self, stream: bytes, agency: int) -> bool:
         if len(stream) != 8:
             return False
         

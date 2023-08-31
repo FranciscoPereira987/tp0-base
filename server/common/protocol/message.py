@@ -6,7 +6,7 @@ class Message():
     def serialize(self) -> bytes:
         pass
 
-    def deserialize(self, stream: bytes) -> bool:
+    def deserialize(self, stream: bytes, agency: int = 0) -> bool:
         return self._compare_streams(self.serialize(), stream)
 
     def should_ack(self) -> bool:

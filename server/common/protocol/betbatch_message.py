@@ -28,24 +28,24 @@ class BetBatchMessage(Message):
 
         return header + serialized_bets
     
-    def __deserialize_bet(self, stream: bytes) -> (bytes, bool):
+    def __deserialize_bet(self, stream: bytes, agency: int) -> (bytes, bool):
         betsize = self._get_message_length(stream)
         if betsize < 0:
             return bytes(), False
         new_bet = BetMessage()
-        ok = new_bet.deserialize(stream[:betsize])
+        ok = new_bet.deserialize(stream[:betsize], agency)
         if not ok:
             return bytes(), False
         self.bets.append(new_bet)
         return stream[betsize:], ok
     
-    def deserialize(self, stream: bytes) -> bool:
+    def deserialize(self, stream: bytes, agency: int) -> bool:
         if not self._check_header(stream, self.BETBATCH_OP):
             return False
         ok = True
         stream = stream[self.HEADER_SIZE:]
         while len(stream) > 0 and ok:
-            stream, ok = self.__deserialize_bet(stream)
+            stream, ok = self.__deserialize_bet(stream, agency)
             
 
         return ok

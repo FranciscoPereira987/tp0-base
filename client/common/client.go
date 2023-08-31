@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -115,6 +116,26 @@ func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
 	stopNotify <- true
 }
 
+func (c *Client) waitForWinners() {
+	winners := new(protocol.Winners)
+	response := new(protocol.WinnersResponse)
+	backoff := c.config.LoopLapse
+
+	gotResponse := false
+
+	for i := 0; !gotResponse; i++ {
+		<- time.After(backoff)
+		c.createClientSocket()
+		err := c.conn.Write(winners)
+		if err == nil {
+			c.conn.Read(response)
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", response.TotalWinners())
+			gotResponse = true
+		}
+		c.conn.Close()
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
@@ -153,7 +174,9 @@ func (c *Client) StartClientLoop() {
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-	c.stop()
+	c.conn.Close()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.waitForWinners()
+	c.stop()
 	c.waitGroup.Wait()
 }
