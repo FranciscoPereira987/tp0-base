@@ -87,7 +87,7 @@ func (c *Client) isRunning() bool {
 //Sets the c.stopNotify channel and starts up manageStatus 
 func (c *Client) setStatusManager() {
 	
-	stopNotify := make(chan os.Signal)
+	stopNotify := make(chan os.Signal, 1)
 	timerNotify := time.After(c.config.LoopLapse)
 
 	signal.Notify(stopNotify, syscall.SIGTERM)
