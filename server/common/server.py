@@ -39,15 +39,11 @@ class Server:
         while client_sock.active:
             try:
                 client_sock.read(bet)
-            except OSError as e:
-                logging.error("action: receive_message | result: fail | error: {e}")
             except CloseException as e:
-                logging.error(f"action: recieve_message | result: failed | connection: {e}")
-            except BrokenConnectionException as e:
+                logging.error(f"action: recieve_message | result: conection_closed | error: {e}")
+            except Exception as e:
                 client_sock.close()
-                logging.error(f"action: recieve_message | result: failed | connection: {e}")
-            finally:
-                pass
+                logging.error(f"action: recieve_message | result: failed | error: {e}")
         client_sock.close()
         self._server_socket.update_missing()
 
