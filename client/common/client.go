@@ -3,7 +3,6 @@ package common
 import (
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -23,12 +22,11 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config     ClientConfig
-	conn       *connection.BetConn
-	stopNotify <-chan bool
-	stopChan   chan<- bool
-	running    bool
-	waitGroup  sync.WaitGroup
+	config ClientConfig
+	conn   *connection.BetConn
+	stopNotify chan os.Signal
+	running bool
+	
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -37,7 +35,6 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config:    config,
 		running:   false,
-		waitGroup: sync.WaitGroup{},
 	}
 	return client
 }
@@ -64,57 +61,34 @@ func (c *Client) createClientSocket() error {
 func (c *Client) isRunning() bool {
 	if c.running {
 		select {
-		case c.running = <-c.stopNotify:
+		case <-c.stopNotify:
+			log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
+				c.config.ID)
+			c.stop()
 		default:
-			c.running = c.config.Reader.BetsLeft()
 		}
 	}
 	return c.running
 }
 
 func (c *Client) stop() {
-	if c.stopChan != nil {
-		c.stopChan <- true
-		close(c.stopChan)
-		c.stopChan = nil
-		c.conn.Close()
-		c.config.Reader.Close()
-	}
+	defer close(c.stopNotify)
+	defer c.conn.Close()
+	c.running = false
 }
 
 // Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
 
-	stopNotify := make(chan bool, 1)
-	stopChan := make(chan bool, 1)
+	
+	stopNotify := make(chan os.Signal, 1)
+
+	signal.Notify(stopNotify, syscall.SIGTERM)
+
 	c.stopNotify = stopNotify
 	c.running = true
-	c.stopChan = stopChan
-
-	go c.manageStatus(stopNotify, stopChan)
 }
 
-// Waits for either a message on listener or a timeout, then writes into stopNotify
-func (c *Client) manageStatus(stopNotify chan<- bool, stopChan <-chan bool) {
-	c.waitGroup.Add(1)
-	listener := make(chan os.Signal, 1)
-
-	signal.Notify(listener, syscall.SIGTERM)
-
-	defer c.waitGroup.Done()
-	defer close(listener)
-	defer close(stopNotify)
-
-	select {
-	case <-listener:
-		log.Infof("action: SIGTERM_detected | result: success | client_id: %v",
-			c.config.ID)
-	case <-stopChan:
-		log.Infof("action: finished_processing_bets | result: success | client_id: %v",
-			c.config.ID)
-	}
-	stopNotify <- true
-}
 
 func (c *Client) waitForWinners() {
 	winners := new(protocol.Winners)
@@ -131,8 +105,11 @@ func (c *Client) waitForWinners() {
 			c.conn.Read(response)
 			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", response.TotalWinners())
 			gotResponse = true
+		}else {
+			log.Infof("action: consulta_ganadores | result: failed | error: %s", err)
 		}
 		c.conn.Close()
+		backoff = 2 * backoff
 	}
 }
 
@@ -145,7 +122,7 @@ func (c *Client) StartClientLoop() {
 	c.setStatusManager()
 
 	// Send messages if the loopLapse threshold has not been surpassed
-	for c.isRunning() {
+	for c.isRunning() && c.config.Reader.BetsLeft(){
 		
 		
 		// Create the connection the server in every loop iteration. Send an
@@ -178,5 +155,4 @@ func (c *Client) StartClientLoop() {
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	c.waitForWinners()
 	c.stop()
-	c.waitGroup.Wait()
 }
