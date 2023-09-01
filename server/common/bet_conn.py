@@ -97,10 +97,12 @@ class BetConn():
             raise CloseException()
         
         elif not result and self.__recover_err_message(recieved):
+            self.__shutdown_connection()
             raise ErrRecievedException()
         
         elif not result and self.winners.check_winners(recieved):
             self.write(self.winners.handle_winners(self.id))
+            self.__shutdown_connection()
 
         elif not result:
             self.__send_err()

@@ -4,15 +4,24 @@ from common.protocol.message import Message
 from common.protocol.bet_message import BetMessage
 from common.protocol.betbatch_message import BetBatchMessage
 from common.utils import store_bets
-
+from common.results import ErrResult, ExecutionResult, OkResult
 
 class BetReader(Message):
 
-    def __init__(self) -> None:
+    def __init__(self, lock) -> None:
         self.__bets = []
+        self.__result = ErrResult()
+        self.__lock = lock
         
     def deserialize(self, stream: bytes) -> bool:
-        return self.__process_stream(stream)
+        """
+            If the stream was proccessed correctly sets the execution result to Ok
+            subsequent streams do not change the result once it was changed to OkResult
+        """
+        result = self.__process_stream(stream)
+        if result:
+            self.__result = OkResult()
+        return result
     
     def serialize(self) -> bytes:
         return super().serialize()
@@ -22,13 +31,19 @@ class BetReader(Message):
             Stores the readed bets
         """
         try:
-            store_bets(self.__bets)
+            self.__store_bets()
             for bet in self.__bets:
                 logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | number: {bet.number}')
             return True
         except Exception as e:
             logging.info(f"action: apuesta_almacenada | result: fail | error: {e}")
             return False
+        finally:
+            self.__lock.release()
+
+    def executed(self, agency: int) -> ExecutionResult:
+        self.__result.agency = agency
+        return self.__result
 
     def __process_stream(self, stream: bytes) -> bool:
         """
@@ -51,3 +66,9 @@ class BetReader(Message):
             self.__bets = [bet.bet for bet in message.bets]
         
         return result and self.process_bets()
+    
+    def __store_bets(self):
+        self.__lock.acquire()
+        store_bets(self.__bets)
+        
+

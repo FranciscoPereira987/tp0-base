@@ -60,7 +60,7 @@ func (wc *WinnersConn) WaitForWinners() (*protocol.WinnersResponse, error){
 	
 	for  winners, err = wc.queryWinners(connection) ;err != nil;  {
 		log.Infof("activity: consulta_ganadores | result: in_progress | err: server_not_ready")
-		connection.Close()
+		connection.shutdown()
 		wc.backoff()
 		connection, err = wc.connect()
 		if err != nil {
@@ -69,6 +69,6 @@ func (wc *WinnersConn) WaitForWinners() (*protocol.WinnersResponse, error){
 		}
 		winners, err = wc.queryWinners(connection)
 	}
-	connection.Close()
+	connection.shutdown()
 	return winners, err
 }

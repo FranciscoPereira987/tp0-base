@@ -7,13 +7,20 @@ from common.protocol.bet_message import BetMessage
 from common.exceptions import BrokenConnectionException, CloseException
 from common.utils import store_bets
 from common.bet import BetReader
+from common.runner import Runner
+import multiprocessing as mp
+
 
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
         self._server_socket = BetConnListener(port, listen_backlog)
         self.running = True
+        self.__queue = mp.SimpleQueue()
+        self.__lock = mp.Lock()
+        self.__workers = {}
         self.__set_shutdown()
+        self.__set_sigchld()
 
     def run(self):
         """
@@ -35,17 +42,10 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        bet = BetReader()
-        while client_sock.active:
-            try:
-                client_sock.read(bet)
-            except CloseException as e:
-                logging.error(f"action: recieve_message | result: conection_closed | error: {e}")
-            except Exception as e:
-                client_sock.close()
-                logging.error(f"action: recieve_message | result: failed | error: {e}")
-        client_sock.close()
-        self._server_socket.update_missing()
+        runner = Runner(client_sock, self.__queue, self.__lock)
+        handle = runner.run()
+
+        self.__workers[client_sock.id] = handle
 
     def __accept_new_connection(self) -> BetConn:
         """
@@ -64,11 +64,25 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
+    def __set_sigchld(self):
+        signal.signal(signal.SIGCHLD, self.__handle_sigchld)
+
+    def __handle_sigchld(self, _s, _f):
+        if not self.__queue.empty():
+            result = self.__queue.get()
+
+            if result.ok():
+                self._server_socket.update_missing()
+            self.__workers[result.agency].join()
+
     def __set_shutdown(self):
         signal.signal(signal.SIGTERM, self.__close_server_socket)
 
     def __close_server_socket(self, _s, _f):
         logging.info('action: closing_server_socket | result: in_progress')
+        for worker in self.__workers:
+            self.__workers[worker].terminate()
+            self.__workers[worker].join()
         self._server_socket.close()
         self.running = False
         logging.info('action: closing_server_socket | result: success')

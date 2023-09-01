@@ -141,6 +141,7 @@ func (conn *BetConn) manageInvalidMessage(message []byte, original error) error 
 	}
 
 	if conn.isErrMessage(message) {
+		conn.shutdown()
 		return errors.New("recieved Err message")
 	}
 	return original
