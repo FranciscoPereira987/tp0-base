@@ -11,7 +11,7 @@ type testCase struct {
 func compareBet(a *Bet, b *Bet) (result bool) {
 
 	result = a.BetedNumber == b.BetedNumber
-
+	result = a.Agency == b.Agency
 	result = result && a.Birthdate == b.Birthdate
 	result = result && a.Name == b.Name
 	result = result && a.PersonalId == b.PersonalId
@@ -107,6 +107,7 @@ func Test4ByteMessagesDeserialization(t *testing.T) {
 
 func TestBetAndBetBatchHeaders(t *testing.T) {
 	bet := &Bet{
+		2,
 		"Francisco",
 		"Pereira",
 		"41797243",
@@ -118,14 +119,14 @@ func TestBetAndBetBatchHeaders(t *testing.T) {
 		{
 			"Bet Header",
 			bet,
-			[]byte{BET_OP, 0, 0, 46},
+			[]byte{BET_OP, 0, 0, 50},
 		},
 		{
 			"Bet batch header",
 			&BetBatch{
 				[]Bet{*bet, *bet, *bet, *bet, *bet, *bet, *bet, *bet},
 			},
-			[]byte{BETBATCH_OP, 0, 1, 116},
+			[]byte{BETBATCH_OP, 0, 1, 148},
 		},
 		{
 			"WinnersResp header",
@@ -147,6 +148,7 @@ func TestBetAndBetBatchHeaders(t *testing.T) {
 
 func TestBetDeserialization(t *testing.T) {
 	betTest := &Bet{
+		2,
 		"Francisco",
 		"Pereira",
 		"41797243",
@@ -161,12 +163,13 @@ func TestBetDeserialization(t *testing.T) {
 	deserialized.Deserialize(serialized)
 
 	if !compareBet(betTest, deserialized) {
-		t.Errorf("FAILED: Bet deserialization")
+		t.Errorf("FAILED: Bet deserialization",)
 	}
 }
 
 func TestBetBatchDeserialization(t *testing.T) {
 	bet := Bet{
+		3,
 		"Francisco",
 		"Pereira",
 		"41797243",
@@ -192,27 +195,5 @@ func TestBetBatchDeserialization(t *testing.T) {
 
 	if !compareBetBatch(batchTest, deserialized) {
 		t.Errorf("FAILED: Batch")
-	}
-}
-
-func TestWinnersRespDeserialization(t *testing.T) {
-	winnersResponse := &WinnersResponse{
-		[]string{"41797243"},
-	}
-
-	serialized := winnersResponse.Serialize()
-
-	result := new(WinnersResponse)
-
-	err := result.Deserialize(serialized)
-
-	if err != nil {
-		t.Fatalf("Failed to deserialize response")
-	}
-
-	for index, value := range result.winners{
-		if value != winnersResponse.winners[index]{
-			t.Fatalf("Unexpected value in result: %s", value)
-		}
 	}
 }

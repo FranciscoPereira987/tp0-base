@@ -6,6 +6,7 @@ import (
 )
 
 type Bet struct {
+	Agency uint32
 	Name       string
 	Surname    string
 	PersonalId string
@@ -36,9 +37,7 @@ func (bet Bet) addField(stream *[]byte, field string) {
 	*stream = append(*stream, []byte(field)...)
 }
 
-func (bet Bet) addBetNumbet(stream *[]byte) {
-	serializeUint32(stream, bet.BetedNumber)
-}
+
 
 func (bet Bet) addBody(stream *[]byte) {
 	bet.addField(stream, bet.Name)
@@ -46,8 +45,8 @@ func (bet Bet) addBody(stream *[]byte) {
 	bet.addField(stream, bet.PersonalId)
 	bet.addField(stream, bet.Birthdate)
 
-	bet.addBetNumbet(stream)
-
+	serializeUint32(stream, bet.BetedNumber)
+	serializeUint32(stream, bet.Agency)
 }
 
 func (bet *Bet) Serialize() []byte {
@@ -92,14 +91,11 @@ func (bet Bet) getFieldFromStream(stream *[]byte) (string, error) {
 
 }
 
-func (bet Bet) deserializeBet(stream *[]byte) (uint32, error) {
-	return deserializeUint32(stream)
-}
 
 func (bet *Bet) Deserialize(stream []byte) (err error) {
 	fields := make([]string, 0)
 	var field string
-	var betedNumber uint32
+	var betedNumber, agency uint32
 
 	err = checkHeader(stream, BET_OP)
 
@@ -116,8 +112,12 @@ func (bet *Bet) Deserialize(stream []byte) (err error) {
 	}
 
 	if err == nil {
-		betedNumber, err = bet.deserializeBet(&stream)
-
+		betedNumber, err = deserializeUint32(&stream)
+		if err != nil {
+			return errors.New("invalid bet structure")
+		}
+		agency, err = deserializeUint32(&stream)
+		bet.Agency = agency
 		bet.Name = fields[0]
 		bet.Surname = fields[1]
 		bet.PersonalId = fields[2]

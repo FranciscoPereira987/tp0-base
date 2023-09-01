@@ -16,7 +16,7 @@ var (
 	WINN_OP = byte(0x06)
 	WINNRESP_OP = byte(0x07)
 
-	EXTRA_BET_BYTES = 8
+	EXTRA_BET_BYTES = 12
 
 	HEADER_SIZE = 4
 )
@@ -79,12 +79,12 @@ func checkHeader(stream []byte, op_code byte) (err error) {
 func deserializeUint32(stream *[]byte) (uint32, error) {
 	var number uint32
 
-	if len(*stream) != 4 {
+	if len(*stream) < 4 {
 		return number, errors.New("stream size is diferent than expected")
 	}
 
-	number = binary.BigEndian.Uint32(*stream)
-
+	number = binary.BigEndian.Uint32((*stream)[:HEADER_SIZE])
+	*stream = (*stream)[HEADER_SIZE:]
 	return number, nil
 }
 

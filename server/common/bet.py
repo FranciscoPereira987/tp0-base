@@ -11,8 +11,8 @@ class BetReader(Message):
     def __init__(self) -> None:
         self.__bets = []
         
-    def deserialize(self, stream: bytes, agency: int) -> bool:
-        return self.__process_stream(stream, agency)
+    def deserialize(self, stream: bytes) -> bool:
+        return self.__process_stream(stream)
     
     def serialize(self) -> bytes:
         return super().serialize()
@@ -30,7 +30,7 @@ class BetReader(Message):
             logging.info(f"action: apuesta_almacenada | result: fail | error: {e}")
             return False
 
-    def __process_stream(self, stream: bytes, agency: int) -> bool:
+    def __process_stream(self, stream: bytes) -> bool:
         """
             Processes a stream of bytes, storing the parsed bets
             the stream can be composed of either a single bet or a batch
@@ -42,12 +42,12 @@ class BetReader(Message):
         
         if stream[:1] == BetMessage.BET_OP:
             bet_message = BetMessage()
-            result = bet_message.deserialize(stream, agency)
+            result = bet_message.deserialize(stream)
             self.__bets = [bet_message.bet]
             
         elif stream[:1] == BetBatchMessage.BETBATCH_OP:
             message = BetBatchMessage()
-            result = message.deserialize(stream, agency)
+            result = message.deserialize(stream)
             self.__bets = [bet.bet for bet in message.bets]
         
         return result and self.process_bets()

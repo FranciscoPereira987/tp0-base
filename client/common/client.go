@@ -17,7 +17,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
-	Reader        *BetReader
+	Reader *BetReader
 }
 
 // Client Entity that encapsulates how
@@ -56,8 +56,15 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-// Returns if the client is running
-// If the client is running, checks if a signal has been recieved to shut down the client
+
+func (c *Client) stop() {
+	defer close(c.stopNotify)
+	defer c.conn.Close()
+ 	c.running = false
+}
+
+//Returns if the client is running
+//If the client is running, checks if a signal has been recieved to shut down the client
 func (c *Client) isRunning() bool {
 	if c.running {
 		select {
@@ -71,11 +78,6 @@ func (c *Client) isRunning() bool {
 	return c.running
 }
 
-func (c *Client) stop() {
-	defer close(c.stopNotify)
-	defer c.conn.Close()
-	c.running = false
-}
 
 // Sets the c.stopNotify channel and starts up manageStatus
 func (c *Client) setStatusManager() {
@@ -118,8 +120,8 @@ func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
 
-	c.createClientSocket()
 	c.setStatusManager()
+	c.createClientSocket()
 
 	// Send messages if the loopLapse threshold has not been surpassed
 	for c.isRunning() && c.config.Reader.BetsLeft(){
@@ -133,6 +135,7 @@ func (c *Client) StartClientLoop() {
 
 		if err != nil {
 			log.Errorf("action: batch_read | result: error | info: %s", err)
+			
 		}
 
 		err = c.conn.Write(&batch)
@@ -144,12 +147,11 @@ func (c *Client) StartClientLoop() {
 			)
 			return
 		}
-
-		log.Infof("action: apuestas_enviadas | result: sucess | batch: %v | client_id: %v", msgID, c.config.ID)
-		msgID++
-
+		log.Infof("action: apuesta_enviada | result: success | batch_number: %d",
+			msgID)		
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
+		msgID++
 	}
 	c.conn.Close()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)

@@ -1,10 +1,11 @@
 from common.protocol.message import Message
+from common.utils import Bet
 
 
 class WinnersResponseMessage(Message):
     WINNRESP_OP = bytes([0x07])
 
-    def __init__(self, bets: list = []) -> None:
+    def __init__(self, bets: list[Bet] = []) -> None:
         self.winners = list(map(lambda bet: bet.document, bets))
     
     def __eq__(self, __value: object) -> bool:
@@ -50,7 +51,7 @@ class WinnersResponseMessage(Message):
         field, err = self.__deserialize_field(field_length, stream)
         return field, err
     
-    def deserialize(self, stream: bytes, agency: int) -> bool:
+    def deserialize(self, stream: bytes) -> bool:
         if not self._check_header(stream, self.WINNRESP_OP):
             return False
 

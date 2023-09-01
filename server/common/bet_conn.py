@@ -88,7 +88,7 @@ class BetConn():
             if the client has closed the connection by sending an end message
             it responds to the client and closes the socket.
         """
-        result = expected.deserialize(recieved, self.id)
+        result = expected.deserialize(recieved)
 
         if result and expected.should_ack():
             self.__send_ack()
@@ -124,7 +124,7 @@ class BetConn():
             Whenever an EndMessage is recovered, returns True
         """
         end = EndMessage()
-        result = end.deserialize(message, self.id)
+        result = end.deserialize(message)
         if result:
             logging.info(f"action: connection_close  | result: in_progress | error: Recieved End message")
             self.__send_ack()
@@ -135,13 +135,13 @@ class BetConn():
         """
             Returns True if an ErrMessage is recovered from the stream
         """
-        return ErrMessage().deserialize(message, self.id)
+        return ErrMessage().deserialize(message)
     
     def __recover_ack_message(self, message: bytes) -> bool:
         """
             Returns True if an AckMessage is recovered from the stream
         """
-        return AckMessage().deserialize(message, self.id)
+        return AckMessage().deserialize(message)
 
     def __wait_end(self) -> None:
         """
@@ -153,7 +153,7 @@ class BetConn():
         self.__write_bytes(end_message.serialize())
         readed = self.__read_message(end_message)
         
-        if end_message.deserialize(readed, self.id):
+        if end_message.deserialize(readed):
             self.__send_ack()
             readed = self.__read_message(end_message)
 

@@ -24,6 +24,7 @@ type BetReaderConfig struct {
 }
 
 type BetReader struct {
+	agency int
 	config BetReaderConfig
 	file   *csv.Reader
 	fd     *os.File
@@ -42,6 +43,7 @@ func NewBetReader(config BetReaderConfig, id int) (*BetReader, error) {
 	reader.config = config
 	reader.file = csv.NewReader(file)
 	reader.open = true
+	reader.agency = id
 
 	return reader, nil
 }
@@ -55,6 +57,7 @@ func (reader *BetReader) BetBatch() (protocol.BetBatch, error) {
 		}
 		number, _ := strconv.Atoi(record[BET_NUMBER_POS])
 		bet := protocol.Bet{
+			Agency: uint32(reader.agency),
 			Name:        record[NAME_POS],
 			Surname:     record[SURNAME_POS],
 			PersonalId:  record[ID_POS],

@@ -26,6 +26,9 @@ class WinnersErrHandler(WinnersHandler):
 class WinnersRespHandler(WinnersHandler):
 
     def handle_winners(self, client_id: int) -> Message:
-        bets = list(filter(lambda x: x != None and has_won(x), map(lambda x: x if x.agency == client_id else None,load_bets())))
+        mapped = map(lambda x: x if x.agency == client_id else None,load_bets())
+        
+        bets = filter(lambda x: x != None and has_won(x), mapped)
+        
         return WinnersResponseMessage(bets)
         

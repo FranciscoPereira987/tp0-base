@@ -4,10 +4,10 @@ from common.utils import Bet
 
 class BetMessage(Message):
     BET_OP = bytes([0x04])
-    EXTRA_BET_BYTES = 8
+    EXTRA_BET_BYTES = 12
     
-    def __init__(self, first_name: str = "", last_name: str = "", document: str = "", birthdate: str = "1970-12-31", number: str = "0"):
-        self.bet = Bet('0', first_name, last_name, document, birthdate, number)
+    def __init__(self, agency: str="0", first_name: str = "", last_name: str = "", document: str = "", birthdate: str = "1970-12-31", number: str = "0"):
+        self.bet = Bet(agency, first_name, last_name, document, birthdate, number)
 
     def __eq__(self, __value: object) -> bool:
         try:
@@ -42,6 +42,7 @@ class BetMessage(Message):
         stream += self.__add_field(self.bet.document)
         stream += self.__add_field(self.bet.birthdate.isoformat())
         stream += self._serialize_uint32(self.bet.number)
+        stream += self._serialize_uint32(self.bet.agency)
 
         return stream
 
@@ -72,14 +73,14 @@ class BetMessage(Message):
         field, err = self.__deserialize_field(field_length, stream)
         return field, err
 
-    def deserialize(self, stream: bytes, agency: int) -> bool:
+    def deserialize(self, stream: bytes) -> bool:
         if not self._check_header(stream, self.BET_OP):
             
             return False
         
         stream = stream[self.HEADER_SIZE:]
         
-        fields = [str(agency)]
+        fields = []
         for _ in range(4):
             field, field_size =\
                 self.__get_field_from_stream(stream)
@@ -92,8 +93,12 @@ class BetMessage(Message):
         bet_number = self._deserialize_uint32(stream)
         if bet_number < 0:
             return False
+        stream = stream[self.HEADER_SIZE:]
+        agency_number = self._deserialize_uint32(stream)
+        if agency_number < 0:
+            return False
         fields.append(str(bet_number))
         
-        self.bet = Bet(*fields)
+        self.bet = Bet(agency_number, *fields)
         
         return True
