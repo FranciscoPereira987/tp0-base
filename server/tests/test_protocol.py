@@ -70,15 +70,15 @@ class TestProtocol(unittest.TestCase):
         self.assertTrue(message.deserialize(serialized))
 
     def test_bet_message_serialization(self):
-        message = BetMessage("Francisco", "Pereira", "41797243", "1998-12-17", "12345")
-        expected = BetMessage.BET_OP + bytes([0, 0, 46])
+        message = BetMessage("2", "Francisco", "Pereira", "41797243", "1998-12-17", "12345")
+        expected = BetMessage.BET_OP + bytes([0, 0, 50])
 
         result = message.serialize()[:4]
 
         self.assertListEqual(list(expected), list(result))
 
     def test_bet_message_deserialization(self):
-        message = BetMessage("Francisco", "Pereira", "41797243", "1998-12-17", "12345")
+        message = BetMessage("3", "Francisco", "Pereira", "41797243", "1998-12-17", "12345")
         serialized = message.serialize()
 
         result = BetMessage()
@@ -90,10 +90,10 @@ class TestProtocol(unittest.TestCase):
 
     def test_betbatch_message_serialization(self):
         message = BetBatchMessage()
-        bet = BetMessage("Francisco", "Pereira", "41797243", "1998-12-17", "12345")
+        bet = BetMessage("5", "Francisco", "Pereira", "41797243", "1998-12-17", "12345")
         message.add_bets(8 * [bet])
 
-        expected = BetBatchMessage.BETBATCH_OP + bytes([0, 1, 116])
+        expected = BetBatchMessage.BETBATCH_OP + bytes([0, 1, 148])
 
         result = message.serialize()
 
@@ -101,7 +101,7 @@ class TestProtocol(unittest.TestCase):
 
     def test_betbatch_message_deserialization(self):
         message = BetBatchMessage()
-        bet = BetMessage("Francisco", "Pereira", "41797243", "1998-12-17", "12345")
+        bet = BetMessage("6", "Francisco", "Pereira", "41797243", "1998-12-17", "12345")
         message.add_bets(20 * [bet])
         serialized = message.serialize()
 

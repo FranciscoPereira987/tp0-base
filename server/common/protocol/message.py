@@ -39,11 +39,10 @@ class Message():
     
     def _deserialize_uint32(self, stream: bytes) -> int:
         
-        if len(stream) != 4:
+        if len(stream) < 4:
             return -1
         
-        return int.from_bytes(stream, self.ENDIAN, signed=False)
+        return int.from_bytes(stream[:4], self.ENDIAN, signed=False)
 
     def _serialize_uint32(self, num: int) -> bytes:
         return num.to_bytes(4, self.ENDIAN, signed=False)
-
