@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/connection"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -93,26 +92,24 @@ func (c *Client) setStatusManager() {
 
 
 func (c *Client) waitForWinners() {
-	winners := new(protocol.Winners)
-	response := new(protocol.WinnersResponse)
-	backoff := c.config.LoopLapse
-
-	gotResponse := false
-
-	for i := 0; !gotResponse; i++ {
-		<- time.After(backoff)
-		c.createClientSocket()
-		err := c.conn.Write(winners)
-		if err == nil {
-			c.conn.Read(response)
-			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", response.TotalWinners())
-			gotResponse = true
-		}else {
-			log.Infof("action: consulta_ganadores | result: failed | error: %s", err)
-		}
-		c.conn.Close()
-		backoff = 2 * backoff
+	waiter := connection.NewWinnersConn(c.config.ServerAddress, c.config.ID, c.config.LoopLapse)
+	response, err := waiter.WaitForWinners()
+	if err == nil {
+		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", response.TotalWinners())
+	}else {
+		log.Infof("action: consulta_ganadores | result: failed | error: %s", err)
 	}
+}
+
+func (c *Client) sendBetBatch() error{
+	batch, err := c.config.Reader.BetBatch()
+
+	if err != nil {
+		log.Errorf("action: batch_read | result: error | info: %s", err)
+			
+	}
+
+	return c.conn.Write(&batch)
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
@@ -128,23 +125,13 @@ func (c *Client) StartClientLoop() {
 		
 		
 		// Create the connection the server in every loop iteration. Send an
-		//c.createClientSocket()
-
-		
-		batch, err := c.config.Reader.BetBatch()
-
-		if err != nil {
-			log.Errorf("action: batch_read | result: error | info: %s", err)
-			
-		}
-
-		err = c.conn.Write(&batch)
-
+		err := c.sendBetBatch()
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
 			)
+			c.stop()
 			return
 		}
 		log.Infof("action: apuesta_enviada | result: success | batch_number: %d",

@@ -20,7 +20,7 @@ class WinnersHandler():
 class WinnersErrHandler(WinnersHandler):
 
     def handle_winners(self, client_id: int) -> Message:
-        return ErrMessage().serialize()    
+        return ErrMessage()   
     
 
 class WinnersRespHandler(WinnersHandler):

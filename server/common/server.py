@@ -44,6 +44,7 @@ class Server:
             except CloseException as e:
                 logging.error(f"action: recieve_message | result: failed | connection: {e}")
             except BrokenConnectionException as e:
+                client_sock.close()
                 logging.error(f"action: recieve_message | result: failed | connection: {e}")
             finally:
                 pass
