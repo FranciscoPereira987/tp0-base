@@ -33,6 +33,7 @@ type Client struct {
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
+	config.Bet.Agency = uint32(config.ID)
 	client := &Client{
 		config: config,
 		running: false,
