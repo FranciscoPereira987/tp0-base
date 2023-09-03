@@ -137,9 +137,10 @@ func (c *Client) StartClientLoop() {
 		}
 		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
 			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
-		c.stopIfRunning()
+		c.conn.Close()
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.stopIfRunning()
 }
