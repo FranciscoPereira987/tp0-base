@@ -57,9 +57,20 @@ func (c *Client) createClientSocket() error {
 
 
 func (c *Client) stop() {
-	defer close(c.stopNotify)
-	defer c.conn.Close()
+	log.Infof("action: stop | result: in_progress | comment: closing_stop_channel")
+	close(c.stopNotify)
+	log.Infof("action: stop | result: in_progress | comment: clossing_connection")
+	c.conn.Close()
+	log.Infof("action: stop | result: in_progress | comment: clossing_reader")
+	c.config.Reader.Close()
+	log.Infof("action stop | result: success")
  	c.running = false
+}
+
+func (c *Client) stopIfRunning() {
+	if c.isRunning(){
+		c.stop()
+	}
 }
 
 //Returns if the client is running
@@ -92,6 +103,7 @@ func (c *Client) setStatusManager() {
 
 
 func (c *Client) waitForWinners() {
+	c.conn.Close()
 	waiter := connection.NewWinnersConn(c.config.ServerAddress, c.config.ID, c.config.LoopLapse)
 	response, err := waiter.WaitForWinners()
 	if err == nil {
@@ -131,17 +143,16 @@ func (c *Client) StartClientLoop() {
 				c.config.ID,
 				err,
 			)
-			c.stop()
+			c.stopIfRunning()
 			return
 		}
 		log.Infof("action: apuesta_enviada | result: success | batch_number: %d",
-			msgID)		
+			msgID)				
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 		msgID++
 	}
-	c.conn.Close()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	c.waitForWinners()
-	c.stop()
+	c.stopIfRunning()
 }
