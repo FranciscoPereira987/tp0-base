@@ -59,9 +59,18 @@ func (c *Client) createClientSocket() error {
 
 
 func (c *Client) stop() {
-	defer close(c.stopNotify)
-	defer c.conn.Close()
+	log.Infof("action: stop | result: in_progress | comment: closing_stop_channel")
+	close(c.stopNotify)
+	log.Infof("action: stop | result: in_progress | comment: clossing_connection")
+	c.conn.Close()
+	log.Infof("action stop | result: success")
  	c.running = false
+}
+
+func (c *Client) stopIfRunning() {
+	if c.isRunning(){
+		c.stop()
+	}
 }
 
 //Returns if the client is running
@@ -128,7 +137,7 @@ func (c *Client) StartClientLoop() {
 		}
 		log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d",
 			c.config.Bet.PersonalId, c.config.Bet.BetedNumber)		
-		c.conn.Close()
+		c.stopIfRunning()
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
