@@ -60,6 +60,7 @@ func (c *Client) createClientSocket() error {
 
 
 func (c *Client) stop() {
+<<<<<<< HEAD
 	log.Infof("action: stop | result: in_progress | comment: closing_stop_channel")
 	close(c.stopNotify)
 	log.Infof("action: stop | result: in_progress | comment: clossing_connection")
@@ -72,6 +73,12 @@ func (c *Client) stopIfRunning() {
 	if c.isRunning(){
 		c.stop()
 	}
+=======
+	log.Infof("action: closing_notify_channel | result: in_progress")
+	close(c.stopNotify)
+	log.Infof("action: closing_notify_channel | result: success")
+	c.running = false
+>>>>>>> Ejercicio4
 }
 
 //Returns if the client is running
@@ -127,7 +134,13 @@ func (c *Client) StartClientLoop() {
 		// TODO: Modify the send to avoid short-write
 		err := c.conn.Write(&c.config.Bet) 
 		msgID++
+<<<<<<< HEAD
 		
+=======
+		log.Infof("action: closing_socker | result: in_progress")
+		c.conn.Close()
+		log.Infof("action: closing_socker | result: success")
+>>>>>>> Ejercicio4
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
