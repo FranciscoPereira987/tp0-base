@@ -57,9 +57,20 @@ func (c *Client) createClientSocket() error {
 
 
 func (c *Client) stop() {
-	defer close(c.stopNotify)
-	defer c.conn.Close()
+	log.Infof("action: stop | result: in_progress | comment: closing_stop_channel")
+	close(c.stopNotify)
+	log.Infof("action: stop | result: in_progress | comment: clossing_connection")
+	c.conn.Close()
+	log.Infof("action: stop | result: in_progress | comment: clossing_reader")
+	c.config.Reader.Close()
+	log.Infof("action stop | result: success")
  	c.running = false
+}
+
+func (c *Client) stopIfRunning() {
+	if c.isRunning(){
+		c.stop()
+	}
 }
 
 //Returns if the client is running
@@ -104,7 +115,6 @@ func (c *Client) StartClientLoop() {
 		
 		// Create the connection the server in every loop iteration. Send an
 		//c.createClientSocket()
-
 		
 		batch, err := c.config.Reader.BetBatch()
 
@@ -128,6 +138,6 @@ func (c *Client) StartClientLoop() {
 		time.Sleep(c.config.LoopPeriod)
 		msgID++
 	}
-	c.conn.Close()
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.stopIfRunning()
 }
