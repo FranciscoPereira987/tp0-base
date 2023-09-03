@@ -58,7 +58,9 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) stop() {
-	defer close(c.stopNotify)
+	log.Infof("action: closing_notify_channel | result: in_progress")
+	close(c.stopNotify)
+	log.Infof("action: closing_notify_channel | result: success")
 	c.running = false
 }
 
@@ -117,7 +119,9 @@ func (c *Client) StartClientLoop() {
 		)
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		msgID++
+		log.Infof("action: closing_socker | result: in_progress")
 		c.conn.Close()
+		log.Infof("action: closing_socker | result: success")
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",

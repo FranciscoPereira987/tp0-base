@@ -63,7 +63,12 @@ class Server:
         return c
     
     def __set_shutdown(self):
-        signal.signal(signal.SIGTERM, self.__close_server_socket)
+        def sigterm_handle( _s, _f):
+            logging.info('action: SIGTERM | result: in_progress')
+            self.__close_server_socket(_s, _f)
+            logging.info('action: SIGTERM | result: success')
+            
+        signal.signal(signal.SIGTERM, sigterm_handle)
 
     def __close_server_socket(self, _s, _f):
         logging.info('action: closing_server_socket | result: in_progress')
