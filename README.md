@@ -137,6 +137,8 @@ En este ejercicio es importante considerar los mecanismos de sincronización a u
 
 En caso de que el alumno implemente el servidor Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
+- [Implementacion concurrencia](informes/ejercicio8.md)
+
 ## Consideraciones Generales
 Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios.
 El _fork_ deberá contar con una sección de README que indique como ejecutar cada ejercicio.
