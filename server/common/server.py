@@ -73,7 +73,9 @@ class Server:
 
             if result.ok():
                 self._server_socket.update_missing()
+            logging.info(f"action: child_join(child-{result.agency}) | result: in_progress")
             self.__workers[result.agency].join()
+            logging.info(f"action: child_join(child-{result.agency}) | result: success")
 
     def __set_shutdown(self):
         def sigterm_handle( _s, _f):
@@ -89,6 +91,10 @@ class Server:
             self.__workers[worker].terminate()
             self.__workers[worker].join()
         self._server_socket.close()
-        self.running = False
         logging.info('action: closing_server_socket | result: success')
+        logging.info('action: closing_queue | result: in_progress')
+        self.__queue.close()
+        logging.info('action: closing_queue | result: success')
+
+        self.running = False
         
