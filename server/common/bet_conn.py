@@ -8,7 +8,7 @@ from common.protocol.message import Message
 from common.exceptions import BrokenConnectionException, CloseException, ErrRecievedException, MalformedMessageException, UnexpectedMessageException
 from common.protocol.end_message import EndMessage
 from common.protocol.err_message import ErrMessage
-from common.winners_manager import WinnersErrHandler, WinnersHandler, WinnersRespHandler
+from common.winners_manager import WinnersErrHandler, WinnersHandler, WinnersManager, WinnersRespHandler
 
 
 class BetConnListener():
@@ -19,6 +19,7 @@ class BetConnListener():
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(('', port))
         self.socket.listen(listen_backlog)
+        self.__winners_manager = WinnersManager()
 
     def accept(self) -> ('BetConn', str):
         new_conn, addr = self.socket.accept()
@@ -34,7 +35,7 @@ class BetConnListener():
         self.socket.close()
 
     def __load_handler(self) -> WinnersHandler:
-        return WinnersErrHandler() if self.missing > 0 else WinnersRespHandler()
+        return self.__winners_manager.get_handler(self.missing)
 
 
 class BetConn():

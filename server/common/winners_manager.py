@@ -3,10 +3,21 @@ from common.protocol.message import Message
 from common.protocol.err_message import ErrMessage
 from common.protocol.message import Message
 from common.protocol.message import Message
-from common.utils import has_won, load_bets
+from common.utils import Bet, has_won, load_bets, winners_by_agency
 from common.protocol.winners_message import WinnersMessage
 from common.protocol.winners_response_message import WinnersResponseMessage
 
+class WinnersManager():
+
+    def __init__(self):
+        self.__winners = None
+        self.__handler = WinnersErrHandler()
+
+    def get_handler(self, missing: int) -> 'WinnersHandler':
+        if missing == 0 and not self.__winners:
+            self.__winners = winners_by_agency()
+            self.__handler = WinnersRespHandler(self.__winners)
+        return self.__handler
 
 class WinnersHandler():
     
@@ -25,10 +36,11 @@ class WinnersErrHandler(WinnersHandler):
 
 class WinnersRespHandler(WinnersHandler):
 
+    def __init__(self, winners_map: dict[int, list[Bet]]) -> None:
+        self.__map = winners_map
+
     def handle_winners(self, client_id: int) -> Message:
-        mapped = map(lambda x: x if x.agency == client_id else None,load_bets())
-        
-        bets = filter(lambda x: x != None and has_won(x), mapped)
+        bets = self.__map.get(client_id, [])
         
         return WinnersResponseMessage(bets)
         
