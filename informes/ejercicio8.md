@@ -11,3 +11,18 @@ El proceso principal define un handle de *SIGCHLD*. Cuando un proceso hijo termi
 
 Para escribir en el archivo de apuestas, los distintos procesos se sincronizan a travez de un *multiprocessing.Lock*.
 Cuando todas las casas de apuestas terminan de enviar la apuestas realizadas en las mismas, el proceso principal lee el archivo de apuestas y obtiene los ganadores, segregandolos por casa de apuesta.
+
+
+### Graceful shutdown del servidor
+
+El servidor implementa graceful shutdown de la siguiente manera:
+
+1. Todos los procesos hijos definen un handler de *SIGTERM*
+2. Al recibir el proceso principal una señal de tipo *SIGTERM*, reenvia la señal a todos los procesos hijos ejecutando la siguiente sentencia:
+
+```python
+    hijo.terminate()
+    hijo.join()
+```
+
+3. Luego de asegurarse que todos los procesos hijos finalizaron correctamente, el proceso principal libera los recursos asociados al *socket* y a la *cola*
