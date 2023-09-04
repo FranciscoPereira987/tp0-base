@@ -153,6 +153,8 @@ func (c *Client) StartClientLoop() {
 		msgID++
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-	c.waitForWinners()
+	if c.isRunning() {
+		c.waitForWinners()
+	}
 	c.stopIfRunning()
 }

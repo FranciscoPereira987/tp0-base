@@ -45,7 +45,17 @@ class Server:
         runner = Runner(client_sock, self.__queue, self.__lock)
         handle = runner.run()
 
-        self.__workers[client_sock.id] = handle
+        self.__new_handle(client_sock.id, handle)
+
+    def __new_handle(self, agency: int, handle: mp.Process):
+        actual = self.__workers.get(agency, None)
+        if actual and actual.is_alive():
+            logging.info(f"action: new_client(id={agency}) | result: Failed | err: agency_already_connected")
+            handle.terminate()
+            handle.join()
+        else:
+            logging.info(f"action: new_client(id={agency}) | result: success")
+            self.__workers[agency] = handle
 
     def __accept_new_connection(self) -> BetConn:
         """
