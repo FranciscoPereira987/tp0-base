@@ -135,9 +135,6 @@ func (c *Client) StartClientLoop() {
 		}
 		log.Infof("action: apuesta_enviada | result: success | batch_number: %d",
 			msgID)				
-		log.Infof("action: closing_socker | result: in_progress")
-		c.conn.Close()
-		log.Infof("action: closing_socker | result: success")
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 		msgID++
