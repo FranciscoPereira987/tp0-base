@@ -9,14 +9,19 @@ from common.protocol.winners_response_message import WinnersResponseMessage
 
 class WinnersManager():
 
-    def __init__(self):
+    def __init__(self, lock):
         self.__winners = None
         self.__handler = WinnersErrHandler()
+        self.__lock = lock
 
     def get_handler(self, missing: int) -> 'WinnersHandler':
-        if missing == 0 and not self.__winners:
-            self.__winners = winners_by_agency()
-            self.__handler = WinnersRespHandler(self.__winners)
+        try:
+            self.__lock.acquire()
+            if missing == 0 and not self.__winners:
+                self.__winners = winners_by_agency()
+                self.__handler = WinnersRespHandler(self.__winners)
+        finally:
+            self.__lock.release()
         return self.__handler
 
 class WinnersHandler():

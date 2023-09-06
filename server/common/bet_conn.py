@@ -14,12 +14,12 @@ from common.winners_manager import WinnersErrHandler, WinnersHandler, WinnersMan
 class BetConnListener():
     
     # Initialices a BetConn that can listen for connections
-    def __init__(self, port: int, listen_backlog: int) -> None:
+    def __init__(self, port: int, listen_backlog: int, lock) -> None:
         self.missing = listen_backlog
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind(('', port))
         self.socket.listen(listen_backlog)
-        self.__winners_manager = WinnersManager()
+        self.__winners_manager = WinnersManager(lock)
 
     def accept(self) -> ('BetConn', str):
         new_conn, addr = self.socket.accept()

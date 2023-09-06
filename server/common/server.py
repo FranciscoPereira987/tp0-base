@@ -14,13 +14,12 @@ import multiprocessing as mp
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
-        self._server_socket = BetConnListener(port, listen_backlog)
+        self.__lock = mp.Lock()
+        self._server_socket = BetConnListener(port, listen_backlog, self.__lock)
         self.running = True
         self.__queue = mp.SimpleQueue()
-        self.__lock = mp.Lock()
         self.__workers = {}
         self.__set_shutdown()
-        self.__set_sigchld()
 
     def run(self):
         """
@@ -31,6 +30,7 @@ class Server:
         finishes, servers starts to accept new connections again
         """
         while self.running:
+            self.__check_workers()
             client_sock = self.__accept_new_connection()
             if self.running:
                 self.__handle_client_connection(client_sock)
@@ -74,11 +74,8 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
-    def __set_sigchld(self):
-        signal.signal(signal.SIGCHLD, self.__handle_sigchld)
-
-    def __handle_sigchld(self, _s, _f):
-        if not self.__queue.empty():
+    def __check_workers(self):
+        while not self.__queue.empty():
             result = self.__queue.get()
 
             if result.ok():
