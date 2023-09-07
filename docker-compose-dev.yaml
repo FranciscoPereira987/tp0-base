@@ -8,8 +8,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
+    volumes:
+      - ./config/server:/config/
     networks:
       - testing_net
+
 
   client1:
     container_name: client1
@@ -20,8 +23,42 @@ services:
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./config/client:/config
+      - ./.data/dataset:/dataset
     depends_on:
       - server
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    volumes:
+      - ./config/client:/config
+      - ./.data/dataset:/dataset
+    depends_on:
+      - server
+
+  client3:
+    container_name: client3
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    volumes:
+      - ./config/client:/config
+      - ./.data/dataset:/dataset
+    depends_on:
+      - server
+
 
 networks:
   testing_net:

@@ -6,7 +6,7 @@ import time
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
-LOTTERY_WINNER_NUMBER = 7574
+LOTTERY_WINNER_NUMBER = 8798
 
 
 """ A lottery bet registry. """
@@ -23,16 +23,34 @@ class Bet:
         self.document = document
         self.birthdate = datetime.date.fromisoformat(birthdate)
         self.number = int(number)
+    def __str__(self):
+        return f"name: {self.first_name} {self.last_name}\n id: {self.document}\n\
+                birthdate: {self.birthdate}\n number: {self.number}"
+
+"""
+    Returns the winners by agency
+    Not thread-safe/process-safe
+"""
+def winners_by_agency() -> dict[int, list[Bet]]:
+    winners = {}
+    winners_bets = filter(lambda x: has_won(x), load_bets())
+    for winner in winners_bets:
+        agency = winners.setdefault(winner.agency, [])
+        agency.append(winner)
+    return winners
+
 
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
 
+
+
 """
 Persist the information of each bet in the STORAGE_FILEPATH file.
 Not thread-safe/process-safe.
 """
-def store_bets(bets: list[Bet]) -> None:
+def  store_bets(bets: list[Bet]) -> None:
     with open(STORAGE_FILEPATH, 'a+') as file:
         writer = csv.writer(file, quoting=csv.QUOTE_MINIMAL)
         for bet in bets:

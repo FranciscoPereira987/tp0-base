@@ -3,6 +3,10 @@ PWD := $(shell pwd)
 
 GIT_REMOTE = github.com/7574-sistemas-distribuidos/docker-compose-init
 
+#Agrego la definicion de CLIENTS en caso de que no se defina al momento de correr 
+# make docker-compose-up
+CLIENTS ?= 3
+
 default: build
 
 all:
@@ -26,6 +30,9 @@ docker-image:
 .PHONY: docker-image
 
 docker-compose-up: docker-image
+	# make CLIENTS=N docker-compose-up levanta el servicio con N clientes
+	# lo primero que hace es correr el script para generar el nuevo docker-compose
+	python scripts/compose_script.py -c $(CLIENTS)
 	docker compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 
