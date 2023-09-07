@@ -73,7 +73,7 @@ Un mensaje *End* se compone unicamente por su header correspondiente:
 |:--:|:--:|
 |0xff|4|
 
-> Los mensajes *End* se responden utilizando un *Ack* e indican que no se realizara el intercambio de mensajes posteriores.
+> Los mensajes *End* se responden utilizando un *Ack* e indican que no se realizara el intercambio de mensajes posteriores. Por lo que la conexion debe terminarse inmediatamente.
 
 ##### Bet
 
@@ -169,3 +169,20 @@ Los Documentos de los ganadores, se codifican de la misma manera que los campos 
 
 
 ### Flujos del protocolo
+
+#### Envio de apuestas
+
+1. Servidor espera por que un cliente se conecte
+    - Cuando el cliente se conecta, envia un mensaje *Hello*
+    - El servidor, responde con un *Ack* al cliente
+2. El cliente le envia las apuestas al servidor
+    - La apuesta se puede enviar utilizando tanto un mensaje *BetBatch* como un mensaje *Bet*
+    - Luego de procesar las apuestas, el servidor responde con un *Ack* (indicando que el procesamiento de la/las apuestas fue exitoso) o bien con un *Err* (Indicando que ocurrio un error con el procesamiento de la/las apuestas)
+3. Cuando el cliente termina de enviar las apuestas al servidor envia un mensaje *End* indicando que la conexion va a cerrarse.
+
+#### Query de Ganadores
+
+1. El cliente se conecta con el servidor, siguiendo el flujo anteriormente mensionado.
+2. El cliente le envia un mensaje *Winners* al servidor
+    - En caso de que el sorteo no haya sido realizado, el servidor responde con un mensaje de tipo *Err* y la conexion se cierra en ambos extremos.
+    - En caso de que el sorteo haya sido realizado y el servidor tenga una respuesta, el mismo responde con un mensaje de tipo *WinnersResponse*
